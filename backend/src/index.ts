@@ -24,11 +24,29 @@ const PORT = process.env.PORT || 3001;
 // Security middleware
 app.use(helmet());
 
-// CORS configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true,
-}));
+// CORS configuration (supports multiple origins and Vercel previews)
+const allowedOriginsRaw = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || 'http://localhost:3000')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      try {
+        const hostname = new URL(origin).hostname;
+        const isExplicitAllowed = allowedOriginsRaw.includes(origin);
+        const isVercelPreview = /vercel\.app$/i.test(hostname);
+        if (isExplicitAllowed || isVercelPreview) return callback(null, true);
+      } catch {
+        // fallthrough
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+  })
+);
 
 // Rate limiting
 const limiter = rateLimit({
