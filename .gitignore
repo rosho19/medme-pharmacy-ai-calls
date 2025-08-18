@@ -1,0 +1,21 @@
+# Node/Next/TS
+node_modules
+dist
+.next
+out
+
+# Env files
+.env
+*.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Prisma local files (if any)
+prisma/dev.db

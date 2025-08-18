@@ -1,0 +1,76 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+model Patient {
+  id              String   @id @default(cuid())
+  name            String
+  phone           String   @unique
+  address         String?
+  medicationInfo  Json?    @map("medication_info")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  calls           Call[]
+  
+  @@map("patients")
+}
+
+model Call {
+  id             String      @id @default(cuid())
+  patientId      String      @map("patient_id")
+  status         CallStatus  @default(PENDING)
+  callSid        String?     @map("call_sid")
+  summary        String?
+  structuredData Json?       @map("structured_data")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  completedAt    DateTime?   @map("completed_at")
+  
+  // Relations
+  patient        Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  callLogs       CallLog[]
+  
+  @@map("calls")
+}
+
+model Pharmacist {
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  pharmacyId String?  @map("pharmacy_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  
+  @@map("pharmacists")
+}
+
+model CallLog {
+  id        String   @id @default(cuid())
+  callId    String   @map("call_id")
+  eventType String   @map("event_type")
+  data      Json?
+  timestamp DateTime @default(now())
+  
+  // Relations
+  call      Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
+  
+  @@map("call_logs")
+}
+
+enum CallStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELLED
+}
