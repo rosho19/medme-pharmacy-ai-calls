@@ -152,26 +152,26 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
           Enter medication information as JSON format (optional)
         </p>
         {errors.medicationInfo && (
-          <p className="mt-1 text-sm text-red-600">{errors.medicationInfo.message}</p>
+          <p className="mt-1 text-sm text-red-600">{(errors.medicationInfo as any)?.message?.toString() || 'Invalid medication info'}</p>
         )}
       </div>
 
-      {/* Error Messages */}
-      {createPatientMutation.error && (
+      {/** Error Messages **/}
+      {createPatientMutation.error ? (
         <div className="p-3 bg-red-50 border border-red-200 rounded-md">
           <p className="text-sm text-red-600">
-            {(createPatientMutation.error as any)?.message || 'Failed to create patient'}
+            {String((createPatientMutation.error as any)?.message || 'Failed to create patient')}
           </p>
         </div>
-      )}
+      ) : null}
 
-      {updatePatientMutation.error && (
+      {updatePatientMutation.error ? (
         <div className="p-3 bg-red-50 border border-red-200 rounded-md">
           <p className="text-sm text-red-600">
-            {(updatePatientMutation.error as any)?.message || 'Failed to update patient'}
+            {String((updatePatientMutation.error as any)?.message || 'Failed to update patient')}
           </p>
         </div>
-      )}
+      ) : null}
 
       {/* Success Messages */}
       {createPatientMutation.isSuccess && (
