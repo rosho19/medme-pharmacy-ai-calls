@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Phone, Users, Clock, CheckCircle } from 'lucide-react'
 
 export function Dashboard() {
@@ -67,17 +68,17 @@ export function Dashboard() {
       <div className="card p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="btn-primary">
-            <Phone className="h-4 w-4 mr-2" />
+          <Link className="btn-primary text-center" href="/patients">
+            <Phone className="h-4 w-4 mr-2 inline" />
             Start New Call
-          </button>
-          <button className="btn-secondary">
-            <Users className="h-4 w-4 mr-2" />
+          </Link>
+          <Link className="btn-secondary text-center" href="/patients">
+            <Users className="h-4 w-4 mr-2 inline" />
             Add Patient
-          </button>
-          <button className="btn-outline">
+          </Link>
+          <Link className="btn-outline text-center" href="/calls">
             View All Calls
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -95,7 +96,6 @@ export function Dashboard() {
             </div>
             <span className="badge-success">Completed</span>
           </div>
-          
           <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
             <div className="flex items-center space-x-3">
               <div className="w-2 h-2 bg-warning-500 rounded-full"></div>
@@ -106,7 +106,6 @@ export function Dashboard() {
             </div>
             <span className="badge-warning">In Progress</span>
           </div>
-          
           <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
             <div className="flex items-center space-x-3">
               <div className="w-2 h-2 bg-primary-500 rounded-full"></div>

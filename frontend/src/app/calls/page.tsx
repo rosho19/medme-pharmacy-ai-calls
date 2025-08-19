@@ -5,22 +5,25 @@ import { api } from '@/utils/api'
 import { CallItem } from '@/types'
 
 export default function CallsPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['calls'],
     queryFn: async () => {
       const res = await api.get('/calls')
-      return res.data?.data as CallItem[]
+      return (res.data?.data || []) as CallItem[]
     },
     refetchInterval: 5000,
   })
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Calls</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Calls</h1>
+        <button className="btn-ghost" onClick={() => refetch()}>Refresh</button>
+      </div>
       <div className="card p-6">
-        {isLoading ? (
-          <p>Loading…</p>
-        ) : (
+        {isLoading && <p>Loading…</p>}
+        {isError && <p className="text-red-600 text-sm">Failed to load calls: {(error as any)?.message}</p>}
+        {!isLoading && !isError && (
           <div className="divide-y">
             {data?.map((c) => (
               <div key={c.id} className="py-3">
