@@ -90,8 +90,9 @@ export const createCall = async (req: Request, res: Response, next: NextFunction
       return;
     }
 
+    // Create as IN_PROGRESS (no more PENDING)
     const call = await prisma.call.create({
-      data: { patientId, status: CallStatus.PENDING },
+      data: { patientId, status: CallStatus.IN_PROGRESS },
       include: { patient: { select: { id: true, name: true, phone: true } } },
     });
 
@@ -103,37 +104,80 @@ export const createCall = async (req: Request, res: Response, next: NextFunction
       },
     });
 
-    // Integrate with Vapi to trigger actual call
-    try {
-      const vapiResult = await initiateOutboundCall({
-        toPhoneNumber: patient.phone,
-        patientId,
-        patientName: patient.name,
-      });
+    if (process.env.MOCK_VAPI === 'true') {
+      // Simulate transcript and completion after 10s
+      const t0 = new Date();
+      const agent = (text: string) => ({ eventType: 'TRANSCRIPT', data: { speaker: 'agent', text } });
+      const user = (text: string) => ({ eventType: 'TRANSCRIPT', data: { speaker: 'patient', text } });
 
-      const possibleId = (vapiResult as any)?.id || (vapiResult as any)?.callId || (vapiResult as any)?.conversationId;
-      if (possibleId) {
+      const transcript = [
+        agent('Hello, this is Riley from Specialty Pharmacies. May I confirm your full name, phone, and address?'),
+        user(`${patient.name}, ${patient.phone}, ${patient.address ?? 'address confirmed'}`),
+        agent('Thanks. When will you be available at home for your upcoming delivery?'),
+        user('Friday between 2 and 4 PM works for me.'),
+        agent('Any changes in your medication needs? Skipped doses or delayed refills?'),
+        user('No changes this month.'),
+        agent('Any feedback about your last shipment?'),
+        user('Everything arrived on time and in good condition.'),
+      ]
+
+      for (const l of transcript) {
+        await prisma.callLog.create({ data: { callId: call.id, ...l, timestamp: new Date() } })
+      }
+
+      setTimeout(async () => {
+        const summary = [
+          `Identity verified for ${patient.name} (${patient.phone}, ${patient.address ?? 'address on file'}).`,
+          'Availability: Friday 2–4 PM.',
+          'Medication changes: None.',
+          'Shipment feedback: On time, no issues.',
+        ].join(' ')
+
         await prisma.call.update({
           where: { id: call.id },
-          data: { callSid: String(possibleId) },
-        });
+          data: { status: CallStatus.COMPLETED, summary, completedAt: new Date(t0.getTime() + 10000) },
+        })
 
         await prisma.callLog.create({
           data: {
             callId: call.id,
-            eventType: 'VAPI_DISPATCHED',
-            data: { vapiCallId: possibleId, status: (vapiResult as any)?.status },
+            eventType: 'CALL_ENDED',
+            data: { reason: 'completed(mock)', durationSeconds: 10 },
+          },
+        })
+      }, 10000)
+    } else {
+      // Real integration
+      try {
+        const vapiResult = await initiateOutboundCall({
+          toPhoneNumber: patient.phone,
+          patientId,
+          patientName: patient.name,
+        });
+
+        if ((vapiResult as any)?.id) {
+          await prisma.call.update({
+            where: { id: call.id },
+            data: { callSid: String((vapiResult as any).id) },
+          });
+
+          await prisma.callLog.create({
+            data: {
+              callId: call.id,
+              eventType: 'VAPI_DISPATCHED',
+              data: { vapiCallId: (vapiResult as any).id, status: (vapiResult as any)?.status },
+            },
+          });
+        }
+      } catch (vapiError: any) {
+        await prisma.callLog.create({
+          data: {
+            callId: call.id,
+            eventType: 'VAPI_ERROR',
+            data: { message: vapiError?.message ?? 'Unknown Vapi error' },
           },
         });
       }
-    } catch (vapiError: any) {
-      await prisma.callLog.create({
-        data: {
-          callId: call.id,
-          eventType: 'VAPI_ERROR',
-          data: { message: vapiError?.message ?? 'Unknown Vapi error' },
-        },
-      });
     }
 
     res.status(201).json({ success: true, data: call, message: 'Call initiated successfully' });
@@ -165,7 +209,7 @@ export const updateCallStatus = async (req: Request, res: Response, next: NextFu
     if (summary) updateData.summary = summary;
     if (structuredData) updateData.structuredData = structuredData;
     if (callSid) updateData.callSid = callSid;
-    if (status === CallStatus.COMPLETED || status === CallStatus.FAILED) {
+    if (status === CallStatus.COMPLETED || status === CallStatus.FAILED || status === CallStatus.CANCELLED) {
       updateData.completedAt = new Date();
     }
 

@@ -34,11 +34,6 @@ export function CallDetails({ callId }: CallDetailsProps) {
   const updateCallMutation = useUpdateCall()
 
   const statusConfig = {
-    PENDING: { 
-      color: 'text-blue-600 bg-blue-100', 
-      icon: Clock,
-      text: 'Pending'
-    },
     IN_PROGRESS: { 
       color: 'text-yellow-600 bg-yellow-100', 
       icon: Phone,
@@ -59,7 +54,7 @@ export function CallDetails({ callId }: CallDetailsProps) {
       icon: X,
       text: 'Cancelled'
     }
-  }
+  } as const
 
   const handleStatusUpdate = async (status: CallStatus) => {
     try {
@@ -126,7 +121,7 @@ export function CallDetails({ callId }: CallDetailsProps) {
     )
   }
 
-  const config = statusConfig[call.status] || statusConfig.PENDING
+  const config = (statusConfig as any)[call.status] || statusConfig.IN_PROGRESS
   const Icon = config.icon
   const patientName = call.patient?.name || 'Unknown Patient'
   const duration = call.completedAt 
@@ -149,35 +144,20 @@ export function CallDetails({ callId }: CallDetailsProps) {
         </div>
         
         <div className="flex items-center space-x-3">
-          {call.status === 'PENDING' && (
-            <button
-              onClick={() => handleStatusUpdate('CANCELLED')}
-              disabled={updateCallMutation.isPending}
-              className="btn-outline"
-            >
-              {updateCallMutation.isPending ? (
-                <LoadingSpinner size="sm" className="mr-2" />
-              ) : (
-                <X className="h-4 w-4 mr-2" />
-              )}
-              Cancel Call
-            </button>
-          )}
-          
-          {call.status === 'IN_PROGRESS' && (
-            <button
-              onClick={() => handleStatusUpdate('COMPLETED')}
-              disabled={updateCallMutation.isPending}
-              className="btn-primary"
-            >
-              {updateCallMutation.isPending ? (
-                <LoadingSpinner size="sm" className="mr-2" />
-              ) : (
-                <CheckCircle className="h-4 w-4 mr-2" />
-              )}
-              Mark Complete
-            </button>
-          )}
+           {call.status === 'IN_PROGRESS' && (
+             <button
+               onClick={() => handleStatusUpdate('COMPLETED')}
+               disabled={updateCallMutation.isPending}
+               className="btn-primary"
+             >
+               {updateCallMutation.isPending ? (
+                 <LoadingSpinner size="sm" className="mr-2" />
+               ) : (
+                 <CheckCircle className="h-4 w-4 mr-2" />
+               )}
+               Mark Complete
+             </button>
+           )}
         </div>
       </div>
 
@@ -349,22 +329,6 @@ export function CallDetails({ callId }: CallDetailsProps) {
           </div>
         )}
       </div>
-
-      {/* Structured Data */}
-      {call.structuredData && (
-        <div className="card p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <FileText className="h-5 w-5 mr-2" />
-            Structured Call Data
-          </h2>
-          
-          <div className="bg-gray-50 rounded-lg p-4">
-            <pre className="text-sm text-gray-900 whitespace-pre-wrap overflow-x-auto">
-              {JSON.stringify(call.structuredData, null, 2)}
-            </pre>
-          </div>
-        </div>
-      )}
 
       {/* Call Logs */}
       {call.callLogs && call.callLogs.length > 0 && (
