@@ -1,5 +1,3 @@
-import { VapiClient } from '@vapi-ai/server-sdk'
-
 export interface OutboundCallParams {
 	toPhoneNumber: string;
 	patientId: string;
@@ -24,15 +22,29 @@ export async function initiateOutboundCall(params: OutboundCallParams): Promise<
 	const phoneNumberId = process.env.VAPI_PHONE_NUMBER_ID;
 	if (!phoneNumberId) throw new Error('VAPI_PHONE_NUMBER_ID is not set');
 
-	const baseUrl = process.env.VAPI_BASE_URL || 'https://api.vapi.ai'
+	const baseUrl = (process.env.VAPI_BASE_URL || 'https://api.vapi.ai').replace(/\/$/, '')
+	const endpoint = `${baseUrl}/call`;
 
-	const client = new VapiClient({ token: apiKey, baseUrl })
-
-	const call = await client.calls.create({
+	const payload = {
 		phoneNumberId,
 		assistantId,
 		customer: { number: params.toPhoneNumber },
-	})
+		metadata: { patientId: params.patientId, patientName: params.patientName },
+	};
 
-	return { id: (call as any)?.id, status: (call as any)?.status }
+	const res = await fetch(endpoint, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${apiKey}`,
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify(payload),
+	});
+
+	if (!res.ok) {
+		const text = await res.text();
+		throw new Error(`Status code: ${res.status}\nBody: ${text}`);
+	}
+
+	return (await res.json()) as OutboundCallResult;
 } 
