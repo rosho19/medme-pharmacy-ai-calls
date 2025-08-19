@@ -111,17 +111,18 @@ export const createCall = async (req: Request, res: Response, next: NextFunction
         patientName: patient.name,
       });
 
-      if (vapiResult?.id) {
+      const possibleId = (vapiResult as any)?.id || (vapiResult as any)?.callId || (vapiResult as any)?.conversationId;
+      if (possibleId) {
         await prisma.call.update({
           where: { id: call.id },
-          data: { callSid: vapiResult.id },
+          data: { callSid: String(possibleId) },
         });
 
         await prisma.callLog.create({
           data: {
             callId: call.id,
             eventType: 'VAPI_DISPATCHED',
-            data: { vapiCallId: vapiResult.id, status: vapiResult.status },
+            data: { vapiCallId: possibleId, status: (vapiResult as any)?.status },
           },
         });
       }
