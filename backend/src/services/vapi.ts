@@ -32,8 +32,6 @@ export async function initiateOutboundCall(params: OutboundCallParams): Promise<
 		phoneNumberId,
 		assistantId,
 		customer: { number: params.toPhoneNumber },
-		// Some accounts accept a per-call webhook override
-		...(process.env.VAPI_WEBHOOK_URL ? { webhookUrl: process.env.VAPI_WEBHOOK_URL } : {}),
 	})
 
 	return { id: (call as any)?.id, status: (call as any)?.status }
