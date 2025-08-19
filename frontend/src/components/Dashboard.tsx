@@ -1,9 +1,34 @@
 'use client'
 
 import Link from 'next/link'
-import { Phone, Users, Clock, CheckCircle } from 'lucide-react'
+import { Phone, Users, Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { useDashboardStats, useCalls } from '@/hooks/useCalls'
+import { format } from 'date-fns'
 
 export function Dashboard() {
+  const { data: stats, isLoading: statsLoading, error: statsError } = useDashboardStats()
+  const { data: recentCallsData, isLoading: callsLoading } = useCalls(undefined, undefined, 1, 5)
+
+  const recentCalls = recentCallsData?.data || []
+
+  if (statsError) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600 mt-2">
+            Monitor your AI voice calling system performance and manage patient communications.
+          </p>
+        </div>
+        <div className="card p-6 text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to load dashboard</h3>
+          <p className="text-gray-600">Please check your connection and try again.</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -19,10 +44,17 @@ export function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Patients</p>
-              <p className="text-3xl font-bold text-gray-900">248</p>
+              {statsLoading ? (
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-gray-400">Loading...</span>
+                </div>
+              ) : (
+                <p className="text-3xl font-bold text-gray-900">{stats?.totalPatients || 0}</p>
+              )}
             </div>
-            <div className="p-3 bg-primary-100 rounded-full">
-              <Users className="h-6 w-6 text-primary-600" />
+            <div className="p-3 bg-blue-100 rounded-full">
+              <Users className="h-6 w-6 text-blue-600" />
             </div>
           </div>
         </div>
@@ -31,10 +63,17 @@ export function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Calls Today</p>
-              <p className="text-3xl font-bold text-gray-900">12</p>
+              {statsLoading ? (
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-gray-400">Loading...</span>
+                </div>
+              ) : (
+                <p className="text-3xl font-bold text-gray-900">{stats?.callsToday || 0}</p>
+              )}
             </div>
-            <div className="p-3 bg-success-100 rounded-full">
-              <Phone className="h-6 w-6 text-success-600" />
+            <div className="p-3 bg-green-100 rounded-full">
+              <Phone className="h-6 w-6 text-green-600" />
             </div>
           </div>
         </div>
@@ -43,10 +82,17 @@ export function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Pending Calls</p>
-              <p className="text-3xl font-bold text-gray-900">5</p>
+              {statsLoading ? (
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-gray-400">Loading...</span>
+                </div>
+              ) : (
+                <p className="text-3xl font-bold text-gray-900">{stats?.pendingCalls || 0}</p>
+              )}
             </div>
-            <div className="p-3 bg-warning-100 rounded-full">
-              <Clock className="h-6 w-6 text-warning-600" />
+            <div className="p-3 bg-yellow-100 rounded-full">
+              <Clock className="h-6 w-6 text-yellow-600" />
             </div>
           </div>
         </div>
@@ -55,10 +101,17 @@ export function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Success Rate</p>
-              <p className="text-3xl font-bold text-gray-900">94%</p>
+              {statsLoading ? (
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-gray-400">Loading...</span>
+                </div>
+              ) : (
+                <p className="text-3xl font-bold text-gray-900">{stats?.successRate || 0}%</p>
+              )}
             </div>
-            <div className="p-3 bg-success-100 rounded-full">
-              <CheckCircle className="h-6 w-6 text-success-600" />
+            <div className="p-3 bg-green-100 rounded-full">
+              <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
           </div>
         </div>
@@ -84,39 +137,78 @@ export function Dashboard() {
 
       {/* Recent Activity */}
       <div className="card p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Activity</h2>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-success-500 rounded-full"></div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">Call completed for John Doe</p>
-                <p className="text-xs text-gray-500">Delivery confirmed - 2 minutes ago</p>
-              </div>
-            </div>
-            <span className="badge-success">Completed</span>
-          </div>
-          <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-warning-500 rounded-full"></div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">Call in progress for Sarah Smith</p>
-                <p className="text-xs text-gray-500">Medication update - 5 minutes ago</p>
-              </div>
-            </div>
-            <span className="badge-warning">In Progress</span>
-          </div>
-          <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">New patient added: Mike Johnson</p>
-                <p className="text-xs text-gray-500">Ready for first call - 10 minutes ago</p>
-              </div>
-            </div>
-            <span className="badge-secondary">New</span>
-          </div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">Recent Activity</h2>
+          <Link href="/calls" className="text-sm text-blue-600 hover:text-blue-800">
+            View all calls →
+          </Link>
         </div>
+        
+        {callsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            <span className="ml-2 text-gray-500">Loading recent activity...</span>
+          </div>
+        ) : recentCalls.length === 0 ? (
+          <div className="text-center py-8">
+            <Phone className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">No recent calls found</p>
+            <p className="text-sm text-gray-400 mt-1">Start by adding patients and making calls</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {recentCalls.map((call: any) => {
+              const statusConfig = {
+                COMPLETED: { 
+                  color: 'bg-green-500', 
+                  badge: 'badge-success',
+                  text: 'Completed'
+                },
+                IN_PROGRESS: { 
+                  color: 'bg-yellow-500', 
+                  badge: 'badge-warning',
+                  text: 'In Progress'
+                },
+                PENDING: { 
+                  color: 'bg-blue-500', 
+                  badge: 'badge-secondary',
+                  text: 'Pending'
+                },
+                FAILED: { 
+                  color: 'bg-red-500', 
+                  badge: 'badge-error',
+                  text: 'Failed'
+                },
+                CANCELLED: { 
+                  color: 'bg-gray-500', 
+                  badge: 'badge-secondary',
+                  text: 'Cancelled'
+                }
+              }
+              
+              const config = statusConfig[call.status as keyof typeof statusConfig] || statusConfig.PENDING
+              const patientName = call.patient?.name || 'Unknown Patient'
+              const timeAgo = format(new Date(call.createdAt), 'MMM d, h:mm a')
+              
+              return (
+                <div key={call.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-2 h-2 ${config.color} rounded-full`}></div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        Call {config.text.toLowerCase()} for {patientName}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {call.summary || 'AI voice call'} - {timeAgo}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={config.badge}>{config.text}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )

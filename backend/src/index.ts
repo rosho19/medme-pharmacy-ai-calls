@@ -38,7 +38,8 @@ app.use(
         const hostname = new URL(origin).hostname;
         const isExplicitAllowed = allowedOriginsRaw.includes(origin);
         const isVercelPreview = /vercel\.app$/i.test(hostname);
-        if (isExplicitAllowed || isVercelPreview) return callback(null, true);
+        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+        if (isExplicitAllowed || isVercelPreview || isLocalhost) return callback(null, true);
       } catch {
         // fallthrough
       }
