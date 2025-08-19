@@ -34,6 +34,11 @@ export function CallDetails({ callId }: CallDetailsProps) {
   const updateCallMutation = useUpdateCall()
 
   const statusConfig = {
+    PENDING: { 
+      color: 'text-blue-600 bg-blue-100', 
+      icon: Clock,
+      text: 'Pending'
+    },
     IN_PROGRESS: { 
       color: 'text-yellow-600 bg-yellow-100', 
       icon: Phone,
@@ -121,7 +126,7 @@ export function CallDetails({ callId }: CallDetailsProps) {
     )
   }
 
-  const config = (statusConfig as any)[call.status] || statusConfig.IN_PROGRESS
+  const config = statusConfig[call.status] || statusConfig.PENDING
   const Icon = config.icon
   const patientName = call.patient?.name || 'Unknown Patient'
   const duration = call.completedAt 
@@ -144,20 +149,35 @@ export function CallDetails({ callId }: CallDetailsProps) {
         </div>
         
         <div className="flex items-center space-x-3">
-           {call.status === 'IN_PROGRESS' && (
-             <button
-               onClick={() => handleStatusUpdate('COMPLETED')}
-               disabled={updateCallMutation.isPending}
-               className="btn-primary"
-             >
-               {updateCallMutation.isPending ? (
-                 <LoadingSpinner size="sm" className="mr-2" />
-               ) : (
-                 <CheckCircle className="h-4 w-4 mr-2" />
-               )}
-               Mark Complete
-             </button>
-           )}
+          {call.status === 'PENDING' && (
+            <button
+              onClick={() => handleStatusUpdate('CANCELLED')}
+              disabled={updateCallMutation.isPending}
+              className="btn-outline"
+            >
+              {updateCallMutation.isPending ? (
+                <LoadingSpinner size="sm" className="mr-2" />
+              ) : (
+                <X className="h-4 w-4 mr-2" />
+              )}
+              Cancel Call
+            </button>
+          )}
+          
+          {call.status === 'IN_PROGRESS' && (
+            <button
+              onClick={() => handleStatusUpdate('COMPLETED')}
+              disabled={updateCallMutation.isPending}
+              className="btn-primary"
+            >
+              {updateCallMutation.isPending ? (
+                <LoadingSpinner size="sm" className="mr-2" />
+              ) : (
+                <CheckCircle className="h-4 w-4 mr-2" />
+              )}
+              Mark Complete
+            </button>
+          )}
         </div>
       </div>
 
