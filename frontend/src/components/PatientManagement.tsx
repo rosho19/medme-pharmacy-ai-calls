@@ -20,10 +20,10 @@ import { PatientForm } from '@/components/forms/PatientForm'
 import { Patient } from '@/types'
 import { format } from 'date-fns'
 
-export function PatientManagement() {
+export function PatientManagement({ openNew = false }: { openNew?: boolean }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
-  const [showAddForm, setShowAddForm] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(openNew)
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null)
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
 
