@@ -18,7 +18,9 @@ async function main() {
     logs?: Array<{ eventType: string; data?: any; at?: Date }>
   }) => {
     const createdAt = data.createdAt || new Date()
-    const randomDurationSec = 60 + Math.floor(Math.random() * 61) // 60-120 seconds
+    const randomDurationSec = data.status === CallStatus.COMPLETED
+      ? 60 + Math.floor(Math.random() * 61) // 60-120s
+      : 15 + Math.floor(Math.random() * 41) // 15-55s for non-success
     const call = await prisma.call.create({
       data: {
         patientId,

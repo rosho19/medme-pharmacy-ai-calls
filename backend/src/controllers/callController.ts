@@ -214,7 +214,7 @@ export const createCall = async (req: Request, res: Response, next: NextFunction
 
           // Complete the call
           const created = latest?.createdAt || new Date();
-          const durationSec = 60 + Math.floor(Math.random() * 61); // 60-120s
+          const durationSec = 60 + Math.floor(Math.random() * 61); // 60-120s successes
           await prisma.call.update({
             where: { id: call.id },
             data: {

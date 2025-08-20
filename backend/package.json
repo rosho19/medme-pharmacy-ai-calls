@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "ts-node database/seeds/index.ts",
+    "fix:durations": "ts-node src/scripts/fixDurations.ts",
     "vapi:login": "vapi login",
     "vapi:init": "vapi init",
     "vapi:assistant:list": "vapi assistant list",
