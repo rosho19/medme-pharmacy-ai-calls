@@ -257,7 +257,7 @@ export function CallDetails({ callId }: CallDetailsProps) {
               </div>
             )}
             
-            {duration && (
+            {duration !== null && duration !== undefined && (
               <div>
                 <label className="block text-sm font-medium text-gray-700">Duration</label>
                 <p className="mt-1 text-sm text-gray-900 flex items-center">

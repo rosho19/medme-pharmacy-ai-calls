@@ -201,21 +201,27 @@ export const createCall = async (req: Request, res: Response, next: NextFunction
             return;
           }
 
-          // Append transcript logs
-          for (const line of outcome.transcripts) {
+          // Prepend a standard verification step
+          const verification = [
+            { speaker: 'agent', text: 'For security, may I verify your details on file?' },
+            { speaker: 'patient', text: 'Confirmed.' },
+          ];
+          for (const line of verification.concat(outcome.transcripts)) {
             await prisma.callLog.create({
               data: { callId: call.id, eventType: 'TRANSCRIPT', data: line },
             });
           }
 
           // Complete the call
+          const created = latest?.createdAt || new Date();
+          const durationSec = 60 + Math.floor(Math.random() * 61); // 60-120s
           await prisma.call.update({
             where: { id: call.id },
             data: {
               status: CallStatus.COMPLETED,
               summary: outcome.summary,
               structuredData: outcome.structuredData as any,
-              completedAt: new Date(),
+              completedAt: new Date(created.getTime() + durationSec * 1000),
             },
           });
 
@@ -223,7 +229,7 @@ export const createCall = async (req: Request, res: Response, next: NextFunction
             data: {
               callId: call.id,
               eventType: 'CALL_ENDED',
-              data: { reason: 'completed (mock)' },
+              data: { reason: 'completed' },
             },
           });
         } catch (mockErr) {

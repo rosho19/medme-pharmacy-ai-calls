@@ -18,6 +18,7 @@ async function main() {
     logs?: Array<{ eventType: string; data?: any; at?: Date }>
   }) => {
     const createdAt = data.createdAt || new Date()
+    const randomDurationSec = 60 + Math.floor(Math.random() * 61) // 60-120 seconds
     const call = await prisma.call.create({
       data: {
         patientId,
@@ -25,7 +26,7 @@ async function main() {
         summary: data.summary || null,
         structuredData: data.structuredData || undefined,
         createdAt,
-        completedAt: data.completed ? new Date(createdAt.getTime() + 5000) : null,
+        completedAt: data.completed ? new Date(createdAt.getTime() + randomDurationSec * 1000) : null,
       },
     })
 
@@ -87,6 +88,8 @@ async function main() {
     },
     logs: [
       { eventType: 'CALL_INITIATED', data: { patientName: alice.name, patientPhone: alice.phone } },
+      { eventType: 'TRANSCRIPT', data: { speaker: 'agent', text: 'For security, can I verify your name and address on file?' } },
+      { eventType: 'TRANSCRIPT', data: { speaker: 'patient', text: 'Yes, confirmed.' } },
       { eventType: 'TRANSCRIPT', data: { speaker: 'agent', text: 'Hello, this is Riley…' } },
       { eventType: 'TRANSCRIPT', data: { speaker: 'patient', text: 'Friday afternoon works 2 to 4.' } },
       { eventType: 'TRANSCRIPT', data: { speaker: 'patient', text: 'Doctor increased to 40mg.' } },
@@ -109,6 +112,8 @@ async function main() {
     },
     logs: [
       { eventType: 'CALL_INITIATED' },
+      { eventType: 'TRANSCRIPT', data: { speaker: 'agent', text: 'For security, may I verify your details on file?' } },
+      { eventType: 'TRANSCRIPT', data: { speaker: 'patient', text: 'Confirmed.' } },
       { eventType: 'TRANSCRIPT', data: { speaker: 'patient', text: 'I will be home Tuesday morning.' } },
       { eventType: 'CALL_ENDED', data: { reason: 'completed' } },
     ],
@@ -126,6 +131,7 @@ async function main() {
     },
     logs: [
       { eventType: 'CALL_INITIATED' },
+      { eventType: 'TRANSCRIPT', data: { speaker: 'agent', text: 'For security, can you verify your details on file?' } },
       { eventType: 'TRANSCRIPT', data: { speaker: 'agent', text: 'Please confirm your full name and DOB.' } },
       { eventType: 'TRANSCRIPT', data: { speaker: 'patient', text: '…provides mismatched info (x3).' } },
       { eventType: 'CALL_ENDED', data: { reason: 'disconnected_after_mismatch' } },
@@ -145,6 +151,8 @@ async function main() {
     },
     logs: [
       { eventType: 'CALL_INITIATED' },
+      { eventType: 'TRANSCRIPT', data: { speaker: 'agent', text: 'For security, please confirm your details on file.' } },
+      { eventType: 'TRANSCRIPT', data: { speaker: 'patient', text: 'Confirmed.' } },
       { eventType: 'CALL_ENDED', data: { reason: 'completed' } },
     ],
   })
@@ -162,6 +170,8 @@ async function main() {
     },
     logs: [
       { eventType: 'CALL_INITIATED' },
+      { eventType: 'TRANSCRIPT', data: { speaker: 'agent', text: 'For security, may I verify your details on file?' } },
+      { eventType: 'TRANSCRIPT', data: { speaker: 'patient', text: 'I prefer not to share details over the phone.' } },
       { eventType: 'TRANSCRIPT', data: { speaker: 'patient', text: 'I prefer not to share details over the phone.' } },
       { eventType: 'CALL_ENDED', data: { reason: 'patient_declined' } },
     ],
