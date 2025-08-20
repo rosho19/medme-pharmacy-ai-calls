@@ -339,16 +339,6 @@ export const updateCallStatus = async (req: Request, res: Response, next: NextFu
       },
     });
 
-    if (process.env.MOCK_VAPI === 'true' && status === CallStatus.COMPLETED) {
-      await prisma.callLog.create({
-        data: {
-          callId: id,
-          eventType: 'CALL_ENDED',
-          data: { reason: 'completed (mock-fast-forward)' },
-        },
-      });
-    }
-
     res.status(200).json({ success: true, data: updatedCall });
   } catch (error) {
     next(error);

@@ -291,18 +291,7 @@ export function CallManagement() {
                           )}
                           
                           {call.status === 'IN_PROGRESS' && (
-                            <button
-                              onClick={() => handleStatusUpdate(call.id, 'COMPLETED')}
-                              disabled={updateCallMutation.isPending}
-                              className="btn-sm btn-primary"
-                              title="Mark Complete"
-                            >
-                              {updateCallMutation.isPending ? (
-                                <LoadingSpinner size="sm" />
-                              ) : (
-                                <CheckCircle className="h-3 w-3" />
-                              )}
-                            </button>
+                            <></>
                           )}
                           
                           <button

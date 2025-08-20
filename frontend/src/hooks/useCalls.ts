@@ -16,7 +16,9 @@ export function useCalls(status?: string, patientId?: string, page = 1, limit = 
       const response = await api.get(`/calls?${params}`)
       return response.data
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes (calls change more frequently)
+    staleTime: 60 * 1000,
+    refetchInterval: 5 * 1000,
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -29,7 +31,9 @@ export function useCall(id: string) {
       return response.data.data as CallWithLogs
     },
     enabled: !!id,
-    staleTime: 1 * 60 * 1000, // 1 minute
+    staleTime: 10 * 1000,
+    refetchInterval: 5 * 1000,
+    refetchOnWindowFocus: true,
   })
 }
 

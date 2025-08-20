@@ -168,20 +168,7 @@ export function CallDetails({ callId }: CallDetailsProps) {
             </button>
           )}
           
-          {call.status === 'IN_PROGRESS' && (
-            <button
-              onClick={() => handleStatusUpdate('COMPLETED')}
-              disabled={updateCallMutation.isPending}
-              className="btn-primary"
-            >
-              {updateCallMutation.isPending ? (
-                <LoadingSpinner size="sm" className="mr-2" />
-              ) : (
-                <CheckCircle className="h-4 w-4 mr-2" />
-              )}
-              Mark Complete
-            </button>
-          )}
+          {/* Removed Mark Complete fast-forward for mock */}
 
           <button
             onClick={async () => {
