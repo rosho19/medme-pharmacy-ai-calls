@@ -19,10 +19,13 @@ function getMockOutcome(patient: { name: string; address?: string | null }) {
         success: true,
       },
       transcripts: [
-        { speaker: 'agent', text: 'Hello, this is the pharmacy calling to coordinate your delivery. May I verify your name and address?' },
-        { speaker: 'patient', text: 'Yes, this is correct. I can do Wednesday between 1 and 3 PM.' },
-        { speaker: 'agent', text: 'Great, I have you down for Wednesday 1–3 PM. No changes to medications, correct?' },
-        { speaker: 'patient', text: 'Correct. Everything is the same.' },
+        { speaker: 'agent', text: 'Hello, this is the pharmacy calling to coordinate your delivery. May I verify your full name and delivery address?' },
+        { speaker: 'patient', text: `My name is ${patient.name}. My address is ${patient.address || 'on file'}.` },
+        { speaker: 'agent', text: 'Thank you. Are there any changes to your medications since our last call?' },
+        { speaker: 'patient', text: 'No changes.' },
+        { speaker: 'agent', text: 'Great. What time window works best for delivery this week?' },
+        { speaker: 'patient', text: 'Wednesday between 1 and 3 PM works.' },
+        { speaker: 'agent', text: 'Perfect, I have you down for Wednesday 1–3 PM.' },
       ],
     };
   }
@@ -39,15 +42,18 @@ function getMockOutcome(patient: { name: string; address?: string | null }) {
         success: true,
       },
       transcripts: [
-        { speaker: 'agent', text: 'Hi, calling from the specialty pharmacy. Let us verify your name and address for security.' },
-        { speaker: 'patient', text: 'Details verified. I am available Thursday from 3 to 5 PM.' },
-        { speaker: 'agent', text: 'Any changes to your medications since last month?' },
+        { speaker: 'agent', text: 'Hi, this is the specialty pharmacy. For security, may I confirm your full name and delivery address?' },
+        { speaker: 'patient', text: `This is ${patient.name}. Address is ${patient.address || 'on file'}.` },
+        { speaker: 'agent', text: 'Thanks. Any changes to your medications since last month?' },
         { speaker: 'patient', text: 'My doctor increased Metformin to 1000mg nightly.' },
+        { speaker: 'agent', text: 'Noted. What delivery window would you prefer?' },
+        { speaker: 'patient', text: 'Thursday 3 to 5 PM.' },
+        { speaker: 'agent', text: 'Confirmed: Thursday 3–5 PM.' },
       ],
     };
   }
 
-  // Default to Alice-style outcome
+  // Default (Alice-style) outcome
   return {
     summary:
       'Patient available Friday 2–4 PM. No medication changes. Reported last delivery arrived 1 day late; medication intact.',
@@ -59,10 +65,13 @@ function getMockOutcome(patient: { name: string; address?: string | null }) {
       success: true,
     },
     transcripts: [
-      { speaker: 'agent', text: 'Hello, this is the pharmacy. May I confirm your name and delivery address?' },
-      { speaker: 'patient', text: 'Confirmed. I can do Friday between 2 and 4 PM.' },
-      { speaker: 'agent', text: 'Thanks. Any issues with your last delivery or changes to meds?' },
-      { speaker: 'patient', text: 'Last box came a day late, but everything was fine. No changes.' },
+      { speaker: 'agent', text: 'Hello, this is the pharmacy. May I confirm your full name and delivery address?' },
+      { speaker: 'patient', text: `Yes, I am ${patient.name}. Address is ${patient.address || 'on file'}.` },
+      { speaker: 'agent', text: 'Thank you. Any issues with your last delivery or changes to your meds?' },
+      { speaker: 'patient', text: 'Last package came a day late, but medication was fine. No changes.' },
+      { speaker: 'agent', text: 'Understood. What delivery window works for you this week?' },
+      { speaker: 'patient', text: 'Friday between 2 and 4 PM.' },
+      { speaker: 'agent', text: 'Great, scheduling Friday 2–4 PM.' },
     ],
   };
 }
@@ -186,6 +195,12 @@ export const createCall = async (req: Request, res: Response, next: NextFunction
 
       setTimeout(async () => {
         try {
+          // Skip if already completed with summary (e.g., manual fast-forward)
+          const latest = await prisma.call.findUnique({ where: { id: call.id } });
+          if (latest && latest.status === CallStatus.COMPLETED && latest.summary) {
+            return;
+          }
+
           // Append transcript logs
           for (const line of outcome.transcripts) {
             await prisma.callLog.create({
@@ -212,7 +227,6 @@ export const createCall = async (req: Request, res: Response, next: NextFunction
             },
           });
         } catch (mockErr) {
-          // Best-effort logging if something goes wrong during timeout
           await prisma.callLog.create({
             data: {
               callId: call.id,
@@ -278,18 +292,37 @@ export const updateCallStatus = async (req: Request, res: Response, next: NextFu
       return;
     }
 
-    const call = await prisma.call.findUnique({ where: { id } });
+    const call = await prisma.call.findUnique({ where: { id }, include: { patient: true } });
     if (!call) {
       res.status(404).json({ success: false, error: 'Call not found' });
       return;
     }
 
     const updateData: any = { status };
-    if (summary) updateData.summary = summary;
-    if (structuredData) updateData.structuredData = structuredData;
-    if (callSid) updateData.callSid = callSid;
-    if (status === CallStatus.COMPLETED || status === CallStatus.FAILED || status === CallStatus.CANCELLED) {
+
+    // In MOCK mode, if manually completing without provided summary, generate predetermined outcome instantly
+    if (process.env.MOCK_VAPI === 'true' && status === CallStatus.COMPLETED && !summary && !structuredData) {
+      const outcome = getMockOutcome(call.patient);
+      // Append transcript logs before completion
+      for (const line of outcome.transcripts) {
+        await prisma.callLog.create({
+          data: { callId: id, eventType: 'TRANSCRIPT', data: line },
+        });
+      }
+      updateData.summary = outcome.summary;
+      updateData.structuredData = outcome.structuredData as any;
       updateData.completedAt = new Date();
+    } else {
+      if (summary) updateData.summary = summary;
+      if (structuredData) updateData.structuredData = structuredData;
+      if (callSid) updateData.callSid = callSid;
+      if (
+        status === CallStatus.COMPLETED ||
+        status === CallStatus.FAILED ||
+        status === CallStatus.CANCELLED
+      ) {
+        updateData.completedAt = new Date();
+      }
     }
 
     const updatedCall = await prisma.call.update({
@@ -302,9 +335,19 @@ export const updateCallStatus = async (req: Request, res: Response, next: NextFu
       data: {
         callId: id,
         eventType: 'STATUS_UPDATED',
-        data: { oldStatus: call.status, newStatus: status, summary, structuredData },
+        data: { oldStatus: call.status, newStatus: status, summary: updateData.summary, structuredData: updateData.structuredData },
       },
     });
+
+    if (process.env.MOCK_VAPI === 'true' && status === CallStatus.COMPLETED) {
+      await prisma.callLog.create({
+        data: {
+          callId: id,
+          eventType: 'CALL_ENDED',
+          data: { reason: 'completed (mock-fast-forward)' },
+        },
+      });
+    }
 
     res.status(200).json({ success: true, data: updatedCall });
   } catch (error) {
