@@ -21,7 +21,7 @@ export function Navbar() {
             <div className="hidden md:flex items-center space-x-6">
               <Link
                 href="/"
-                className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors px-2 py-1 rounded-md hover:bg-primary-50"
+                className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors px-2 py-1 rounded-md hover:bg-primary-50 border-b-2 border-transparent hover:border-accent-500"
               >
                 <BarChart3 className="h-4 w-4" />
                 <span>Dashboard</span>
@@ -29,7 +29,7 @@ export function Navbar() {
               
               <Link
                 href="/patients"
-                className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors px-2 py-1 rounded-md hover:bg-primary-50"
+                className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors px-2 py-1 rounded-md hover:bg-primary-50 border-b-2 border-transparent hover:border-accent-500"
               >
                 <Users className="h-4 w-4" />
                 <span>Patients</span>
@@ -37,7 +37,7 @@ export function Navbar() {
               
               <Link
                 href="/calls"
-                className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors px-2 py-1 rounded-md hover:bg-primary-50"
+                className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors px-2 py-1 rounded-md hover:bg-primary-50 border-b-2 border-transparent hover:border-accent-500"
               >
                 <Phone className="h-4 w-4" />
                 <span>Calls</span>
@@ -45,17 +45,11 @@ export function Navbar() {
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
-            <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-              <Settings className="h-5 w-5" />
-            </button>
-            
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center shadow-soft">
-                <span className="text-white text-sm font-medium">P</span>
-              </div>
-              <span className="text-sm font-medium text-gray-700">Pharmacist</span>
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center shadow-soft">
+              <span className="text-white text-sm font-medium">P</span>
             </div>
+            <span className="text-sm font-medium text-gray-700">Pharmacist</span>
           </div>
         </div>
       </div>

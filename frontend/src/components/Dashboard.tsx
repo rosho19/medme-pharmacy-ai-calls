@@ -39,7 +39,7 @@ export function Dashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="card p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -53,8 +53,8 @@ export function Dashboard() {
                 <p className="text-3xl font-bold text-gray-900">{stats?.totalPatients || 0}</p>
               )}
             </div>
-            <div className="p-3 bg-blue-100 rounded-full">
-              <Users className="h-6 w-6 text-blue-600" />
+            <div className="p-3 bg-brand-100 rounded-full">
+              <Users className="h-6 w-6 text-brand-700" />
             </div>
           </div>
         </div>
@@ -72,8 +72,8 @@ export function Dashboard() {
                 <p className="text-3xl font-bold text-gray-900">{stats?.callsToday || 0}</p>
               )}
             </div>
-            <div className="p-3 bg-green-100 rounded-full">
-              <Phone className="h-6 w-6 text-green-600" />
+            <div className="p-3 bg-brand-100 rounded-full">
+              <Phone className="h-6 w-6 text-brand-700" />
             </div>
           </div>
         </div>
@@ -93,8 +93,8 @@ export function Dashboard() {
                 <p className="text-3xl font-bold text-gray-900">{stats?.successRate || 0}%</p>
               )}
             </div>
-            <div className="p-3 bg-green-100 rounded-full">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+            <div className="p-3 bg-brand-100 rounded-full">
+              <CheckCircle className="h-6 w-6 text-brand-700" />
             </div>
           </div>
         </div>
@@ -108,11 +108,11 @@ export function Dashboard() {
             <Phone className="h-4 w-4 mr-2 inline" />
             Start New Call
           </Link>
-          <Link className="btn-secondary text-center" href="/patients">
+          <Link className="btn-primary text-center" href="/patients">
             <Users className="h-4 w-4 mr-2 inline" />
             Add Patient
           </Link>
-          <Link className="btn-outline text-center" href="/calls">
+          <Link className="btn-primary text-center" href="/calls">
             View All Calls
           </Link>
         </div>
