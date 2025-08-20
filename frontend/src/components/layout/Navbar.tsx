@@ -14,7 +14,7 @@ export function Navbar() {
                 <Phone className="h-5 w-5 text-white" />
               </div>
               <span className="text-xl font-bold text-gray-900">
-                Pharmacy AI Calls
+                Specialty Pharmacies - AI Call Tool
               </span>
             </Link>
             

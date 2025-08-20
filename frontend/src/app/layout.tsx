@@ -6,9 +6,9 @@ import { QueryProvider } from '@/components/providers/QueryProvider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Pharmacy AI Calls - Voice Calling System',
-  description: 'AI-powered voice calling system for specialty pharmacy patient communication',
-  keywords: ['pharmacy', 'ai', 'voice calls', 'healthcare', 'patient communication'],
+  title: 'Specialty Pharmacies - AI Call Tool',
+  description: 'AI-powered voice calling tool for specialty pharmacies to streamline patient outreach and delivery coordination.',
+  keywords: ['specialty pharmacy', 'ai', 'voice calls', 'healthcare', 'patient communication'],
 }
 
 export default function RootLayout({
@@ -20,7 +20,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <QueryProvider>
-          <div className="min-h-screen bg-gray-50">
+          <div className="min-h-screen">
             {children}
           </div>
         </QueryProvider>
