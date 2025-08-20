@@ -12,7 +12,7 @@ import { Patient, CreatePatientData } from '@/types'
 const patientSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   phone: z.string().min(1, 'Phone number is required'),
-  address: z.string().optional(),
+  address: z.string().min(1, 'Address is required'),
   medications: z
     .array(
       z.object({
@@ -20,7 +20,7 @@ const patientSchema = z.object({
         dosage: z.string().min(1, 'Dosage is required'),
       })
     )
-    .optional(),
+    .min(1, 'At least one medication is required'),
 })
 
 type FormValues = z.infer<typeof patientSchema>
@@ -136,7 +136,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Address
+          Address *
         </label>
         <input
           {...register('address')}
@@ -151,7 +151,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Medications
+          Medications *
         </label>
         <div className="space-y-3">
           {(fields as any[]).length === 0 && (
@@ -192,6 +192,11 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
             + Add Medication
           </button>
         </div>
+        { (errors as any).medications?.message || (errors as any).medications?._errors?.[0] ? (
+          <p className="mt-1 text-sm text-red-600">
+            { (errors as any).medications?.message || (errors as any).medications?._errors?.[0] }
+          </p>
+        ) : null }
       </div>
 
       {/** Error Messages **/}
