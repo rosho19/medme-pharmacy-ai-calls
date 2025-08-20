@@ -141,7 +141,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
         <input
           {...register('address')}
           className="input"
-          placeholder="123 Main St, City, State 12345"
+          placeholder="123 Main St, Springfield"
           disabled={isPending}
         />
         {errors.address && (
@@ -155,7 +155,9 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
         </label>
         <div className="space-y-3">
           {(fields as any[]).length === 0 && (
-            <div className="text-sm text-gray-500">No medications added.</div>
+            <div className="text-sm text-gray-600 bg-brand-100/40 border border-brand-200 rounded px-3 py-2">
+              No medications added. Add entries like “Lisinopril” and “10mg daily”.
+            </div>
           )}
           {(fields as any[]).map((field: any, index: number) => (
             <div key={field.id || index} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-center">
@@ -184,7 +186,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
           <button
             type="button"
             onClick={() => append({ drug: '', dosage: '' } as any)}
-            className="btn-secondary"
+            className="btn-primary"
             disabled={isPending}
           >
             + Add Medication

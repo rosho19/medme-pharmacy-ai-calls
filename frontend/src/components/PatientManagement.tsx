@@ -120,10 +120,12 @@ export function PatientManagement() {
           </div>
         ) : patients.length === 0 ? (
           <div className="text-center py-12">
-            <User className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <div className="h-12 w-12 rounded-full bg-brand-100 mx-auto mb-4 flex items-center justify-center">
+              <User className="h-6 w-6 text-brand-700" />
+            </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No patients found</h3>
             <p className="text-gray-500 mb-4">
-              {searchTerm ? 'Try adjusting your search terms' : 'Get started by adding your first patient'}
+              {searchTerm ? 'No matches. Try a different name or phone.' : 'Get started by adding your first patient.'}
             </p>
             <button
               onClick={() => setShowAddForm(true)}
@@ -161,8 +163,8 @@ export function PatientManagement() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                            <User className="h-5 w-5 text-blue-600" />
+                          <div className="h-10 w-10 rounded-full bg-brand-100 flex items-center justify-center">
+                            <User className="h-5 w-5 text-brand-700" />
                           </div>
                         </div>
                         <div className="ml-4">
