@@ -14,9 +14,10 @@ import {
   Eye,
   Play,
   Pause,
-  Square
+  Square,
+  Trash2
 } from 'lucide-react'
-import { useCalls, useUpdateCall } from '@/hooks/useCalls'
+import { useCalls, useUpdateCall, useDeleteCall } from '@/hooks/useCalls'
 import { usePatients } from '@/hooks/usePatients'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { CallItem, CallStatus } from '@/types'
@@ -37,6 +38,7 @@ export function CallManagement() {
   )
   const { data: patientsData } = usePatients('', 1, 100) // Get patients for dropdown
   const updateCallMutation = useUpdateCall()
+  const deleteCallMutation = useDeleteCall()
 
   const calls = callsData?.data || []
   const pagination = callsData?.pagination
@@ -302,6 +304,28 @@ export function CallManagement() {
                               )}
                             </button>
                           )}
+                          
+                          <button
+                            onClick={async () => {
+                              if (window.confirm('Delete this call? This action cannot be undone.')) {
+                                try {
+                                  await deleteCallMutation.mutateAsync(call.id)
+                                } catch (e) {
+                                  console.error('Failed to delete call', e)
+                                  alert('Failed to delete call. Please try again.')
+                                }
+                              }
+                            }}
+                            disabled={deleteCallMutation.isPending}
+                            className="btn-sm btn-danger"
+                            title="Delete Call"
+                          >
+                            {deleteCallMutation.isPending ? (
+                              <LoadingSpinner size="sm" />
+                            ) : (
+                              <Trash2 className="h-3 w-3" />
+                            )}
+                          </button>
                         </div>
                       </td>
                     </tr>

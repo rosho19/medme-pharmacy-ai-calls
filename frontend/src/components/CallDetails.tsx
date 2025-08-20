@@ -14,13 +14,15 @@ import {
   MapPin,
   Edit,
   Save,
-  X
+  X,
+  Trash2
 } from 'lucide-react'
-import { useCall, useUpdateCall } from '@/hooks/useCalls'
+import { useCall, useUpdateCall, useDeleteCall } from '@/hooks/useCalls'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { CallStatus } from '@/types'
 import { format } from 'date-fns'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 interface CallDetailsProps {
   callId: string
@@ -32,6 +34,8 @@ export function CallDetails({ callId }: CallDetailsProps) {
   
   const { data: call, isLoading, error } = useCall(callId)
   const updateCallMutation = useUpdateCall()
+  const deleteCallMutation = useDeleteCall()
+  const router = useRouter()
 
   const statusConfig = {
     PENDING: { 
@@ -178,6 +182,25 @@ export function CallDetails({ callId }: CallDetailsProps) {
               Mark Complete
             </button>
           )}
+
+          <button
+            onClick={async () => {
+              if (window.confirm('Delete this call? This action cannot be undone.')) {
+                try {
+                  await deleteCallMutation.mutateAsync(callId)
+                  router.push('/calls')
+                } catch (e) {
+                  console.error('Delete call failed', e)
+                  alert('Failed to delete call. Please try again.')
+                }
+              }
+            }}
+            disabled={deleteCallMutation.isPending}
+            className="btn-outline"
+          >
+            {deleteCallMutation.isPending ? <LoadingSpinner size="sm" className="mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+            Delete
+          </button>
         </div>
       </div>
 
