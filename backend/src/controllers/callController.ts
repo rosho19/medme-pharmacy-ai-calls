@@ -81,12 +81,20 @@ function getMockOutcome(patient: { name: string; address?: string | null; medica
 // @access  Public
 export const getCalls = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { page = 1, limit = 10, status, patientId } = req.query;
+    const { page = 1, limit = 10, status, patientId, search } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
     const where: any = {};
     if (status) where.status = status;
     if (patientId) where.patientId = String(patientId);
+    if (search) {
+      const q = String(search);
+      where.OR = [
+        { summary: { contains: q, mode: 'insensitive' } },
+        { patient: { name: { contains: q, mode: 'insensitive' } } },
+        { patient: { phone: { contains: q } } },
+      ];
+    }
 
     const [calls, total] = await Promise.all([
       prisma.call.findMany({

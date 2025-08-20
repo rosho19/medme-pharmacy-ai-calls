@@ -3,15 +3,16 @@ import { api } from '@/utils/api'
 import { CallItem, CallWithLogs, CreateCallData, UpdateCallData } from '@/types'
 
 // Fetch all calls
-export function useCalls(status?: string, patientId?: string, page = 1, limit = 10) {
+export function useCalls(status?: string, patientId?: string, page = 1, limit = 10, search?: string) {
   return useQuery({
-    queryKey: ['calls', { status, patientId, page, limit }],
+    queryKey: ['calls', { status, patientId, page, limit, search }],
     queryFn: async () => {
       const params = new URLSearchParams()
       if (status) params.append('status', status)
       if (patientId) params.append('patientId', patientId)
       params.append('page', page.toString())
       params.append('limit', limit.toString())
+      if (search) params.append('search', search)
       
       const response = await api.get(`/calls?${params}`)
       return response.data
@@ -106,10 +107,6 @@ export function useDashboardStats() {
         call.createdAt.startsWith(today)
       ).length
       
-      const pendingCalls = calls.filter((call: CallItem) => 
-        call.status === 'PENDING'
-      ).length
-      
       const completedCalls = calls.filter((call: CallItem) => 
         call.status === 'COMPLETED'
       ).length
@@ -121,7 +118,6 @@ export function useDashboardStats() {
       return {
         totalPatients,
         callsToday,
-        pendingCalls,
         successRate,
       }
     },

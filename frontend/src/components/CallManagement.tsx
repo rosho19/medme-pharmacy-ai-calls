@@ -34,7 +34,8 @@ export function CallManagement() {
     statusFilter === 'ALL' ? undefined : statusFilter,
     undefined,
     currentPage,
-    10
+    10,
+    searchTerm || undefined
   )
   const { data: patientsData } = usePatients('', 1, 100) // Get patients for dropdown
   const updateCallMutation = useUpdateCall()
@@ -45,11 +46,6 @@ export function CallManagement() {
   const patients = patientsData?.data || []
 
   const statusConfig = {
-    PENDING: { 
-      color: 'text-blue-600 bg-blue-100', 
-      icon: Clock,
-      text: 'Pending'
-    },
     IN_PROGRESS: { 
       color: 'text-yellow-600 bg-yellow-100', 
       icon: Play,
@@ -64,11 +60,6 @@ export function CallManagement() {
       color: 'text-red-600 bg-red-100', 
       icon: XCircle,
       text: 'Failed'
-    },
-    CANCELLED: { 
-      color: 'text-gray-600 bg-gray-100', 
-      icon: Square,
-      text: 'Cancelled'
     }
   }
 
@@ -137,11 +128,9 @@ export function CallManagement() {
               className="input min-w-[140px]"
             >
               <option value="ALL">All Status</option>
-              <option value="PENDING">Pending</option>
               <option value="IN_PROGRESS">In Progress</option>
               <option value="COMPLETED">Completed</option>
               <option value="FAILED">Failed</option>
-              <option value="CANCELLED">Cancelled</option>
             </select>
           </div>
           
@@ -152,9 +141,9 @@ export function CallManagement() {
       </div>
 
       {/* Call Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {Object.entries(statusConfig).map(([status, config]) => {
-          const count = calls.filter((call: CallItem) => call.status === status).length
+          const count = calls.filter((call: CallItem) => (call.status === status || (status === 'FAILED' && call.status === 'CANCELLED'))).length
           const Icon = config.icon
           
           return (
@@ -221,7 +210,8 @@ export function CallManagement() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {calls.map((call: CallItem) => {
-                  const config = statusConfig[call.status] || statusConfig.PENDING
+                  const statusKey = call.status === 'CANCELLED' ? 'FAILED' : call.status
+                  const config = statusConfig[statusKey as keyof typeof statusConfig] || statusConfig.FAILED
                   const Icon = config.icon
                   const patientName = call.patient?.name || 'Unknown Patient'
                   const duration = call.completedAt 
@@ -279,21 +269,6 @@ export function CallManagement() {
                           >
                             <Eye className="h-3 w-3" />
                           </Link>
-                          
-                          {call.status === 'PENDING' && (
-                            <button
-                              onClick={() => handleStatusUpdate(call.id, 'CANCELLED')}
-                              disabled={updateCallMutation.isPending}
-                              className="btn-sm btn-outline"
-                              title="Cancel Call"
-                            >
-                              {updateCallMutation.isPending ? (
-                                <LoadingSpinner size="sm" />
-                              ) : (
-                                <Square className="h-3 w-3" />
-                              )}
-                            </button>
-                          )}
                           
                           {call.status === 'IN_PROGRESS' && (
                             <></>
