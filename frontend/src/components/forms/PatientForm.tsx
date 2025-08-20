@@ -1,6 +1,7 @@
 'use client'
 
 import { useForm } from 'react-hook-form'
+import { useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useEffect } from 'react'
@@ -12,7 +13,14 @@ const patientSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   phone: z.string().min(1, 'Phone number is required'),
   address: z.string().optional(),
-  medicationInfo: z.record(z.unknown()).optional(),
+  medications: z
+    .array(
+      z.object({
+        drug: z.string().min(1, 'Drug name is required'),
+        dosage: z.string().min(1, 'Dosage is required'),
+      })
+    )
+    .optional(),
 })
 
 type FormValues = z.infer<typeof patientSchema>
@@ -34,7 +42,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
     handleSubmit,
     reset,
     setValue,
-    watch,
+    control,
     formState: { errors, isSubmitting }
   } = useForm<FormValues>({
     resolver: zodResolver(patientSchema),
@@ -42,49 +50,53 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
       name: '',
       phone: '',
       address: '',
-      medicationInfo: {},
+      medications: [{ drug: '', dosage: '' }],
     }
   })
 
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'medications',
+  })
+ 
   // Populate form when editing
   useEffect(() => {
     if (patient) {
       setValue('name', patient.name)
       setValue('phone', patient.phone)
       setValue('address', patient.address || '')
-      setValue('medicationInfo', patient.medicationInfo as Record<string, unknown> || {})
+      const meds = Array.isArray(patient.medicationInfo)
+        ? (patient.medicationInfo as any[])
+        : []
+      setValue('medications',
+        meds.length
+          ? meds.map((m) => ({ drug: String((m as any).drug || ''), dosage: String((m as any).dosage || '') }))
+          : [{ drug: '', dosage: '' }]
+      )
     }
   }, [patient, setValue])
 
   const onSubmit = async (values: FormValues) => {
     try {
+      const payload: any = {
+        name: values.name,
+        phone: values.phone,
+        address: values.address,
+        medicationInfo: (values.medications || [])
+          .filter((m) => m.drug.trim() || m.dosage.trim())
+          .map((m) => ({ drug: m.drug.trim(), dosage: m.dosage.trim() })),
+      }
+
       if (isEditing && patient) {
-        await updatePatientMutation.mutateAsync({
-          id: patient.id,
-          data: values
-        })
+        await updatePatientMutation.mutateAsync({ id: patient.id, data: payload })
       } else {
-        await createPatientMutation.mutateAsync(values as CreatePatientData)
+        await createPatientMutation.mutateAsync(payload as CreatePatientData)
       }
       
       reset()
       onSuccess?.()
     } catch (error) {
       console.error('Failed to save patient:', error)
-    }
-  }
-
-  const medicationInfoValue = watch('medicationInfo')
-  const medicationInfoString = medicationInfoValue 
-    ? JSON.stringify(medicationInfoValue, null, 2)
-    : ''
-
-  const handleMedicationInfoChange = (value: string) => {
-    try {
-      const parsed = value ? JSON.parse(value) : {}
-      setValue('medicationInfo', parsed)
-    } catch (error) {
-      // Invalid JSON, don't update the value
     }
   }
 
@@ -138,22 +150,46 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Medication Information
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Medications
         </label>
-        <textarea
-          value={medicationInfoString}
-          onChange={(e) => handleMedicationInfoChange(e.target.value)}
-          className="input min-h-[100px] font-mono text-sm"
-          placeholder='{"medication": "Lisinopril", "dosage": "10mg", "frequency": "daily"}'
-          disabled={isPending}
-        />
-        <p className="mt-1 text-xs text-gray-500">
-          Enter medication information as JSON format (optional)
-        </p>
-        {errors.medicationInfo && (
-          <p className="mt-1 text-sm text-red-600">{(errors.medicationInfo as any)?.message?.toString() || 'Invalid medication info'}</p>
-        )}
+        <div className="space-y-3">
+          {(fields as any[]).length === 0 && (
+            <div className="text-sm text-gray-500">No medications added.</div>
+          )}
+          {(fields as any[]).map((field: any, index: number) => (
+            <div key={field.id || index} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-center">
+              <input
+                {...register(`medications.${index}.drug` as const)}
+                className="input md:col-span-2"
+                placeholder="Drug name (e.g., Lisinopril)"
+                disabled={isPending}
+              />
+              <input
+                {...register(`medications.${index}.dosage` as const)}
+                className="input md:col-span-2"
+                placeholder="Dosage (e.g., 10mg daily)"
+                disabled={isPending}
+              />
+              <button
+                type="button"
+                onClick={() => remove(index)}
+                className="btn-outline"
+                disabled={isPending}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => append({ drug: '', dosage: '' } as any)}
+            className="btn-secondary"
+            disabled={isPending}
+          >
+            + Add Medication
+          </button>
+        </div>
       </div>
 
       {/** Error Messages **/}
