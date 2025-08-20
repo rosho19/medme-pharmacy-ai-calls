@@ -78,24 +78,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="card p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Pending Calls</p>
-              {statsLoading ? (
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-gray-400">Loading...</span>
-                </div>
-              ) : (
-                <p className="text-3xl font-bold text-gray-900">{stats?.pendingCalls || 0}</p>
-              )}
-            </div>
-            <div className="p-3 bg-yellow-100 rounded-full">
-              <Clock className="h-6 w-6 text-yellow-600" />
-            </div>
-          </div>
-        </div>
+        {/* Pending calls card removed */}
 
         <div className="card p-6">
           <div className="flex items-center justify-between">
@@ -159,34 +142,12 @@ export function Dashboard() {
           <div className="space-y-4">
             {recentCalls.map((call: any) => {
               const statusConfig = {
-                COMPLETED: { 
-                  color: 'bg-green-500', 
-                  badge: 'badge-success',
-                  text: 'Completed'
-                },
-                IN_PROGRESS: { 
-                  color: 'bg-yellow-500', 
-                  badge: 'badge-warning',
-                  text: 'In Progress'
-                },
-                PENDING: { 
-                  color: 'bg-blue-500', 
-                  badge: 'badge-secondary',
-                  text: 'Pending'
-                },
-                FAILED: { 
-                  color: 'bg-red-500', 
-                  badge: 'badge-error',
-                  text: 'Failed'
-                },
-                CANCELLED: { 
-                  color: 'bg-gray-500', 
-                  badge: 'badge-secondary',
-                  text: 'Cancelled'
-                }
+                COMPLETED: { color: 'bg-green-500', badge: 'badge-success', text: 'Completed' },
+                IN_PROGRESS: { color: 'bg-yellow-500', badge: 'badge-warning', text: 'In Progress' },
+                FAILED: { color: 'bg-red-500', badge: 'badge-error', text: 'Failed' },
               }
-              
-              const config = statusConfig[call.status as keyof typeof statusConfig] || statusConfig.PENDING
+              const statusKey = call.status === 'CANCELLED' ? 'FAILED' : call.status
+              const config = statusConfig[statusKey as keyof typeof statusConfig] || statusConfig.FAILED
               const patientName = call.patient?.name || 'Unknown Patient'
               const timeAgo = format(new Date(call.createdAt), 'MMM d, h:mm a')
               
