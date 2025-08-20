@@ -67,20 +67,10 @@ app.use('/api/voice', express.raw({ type: '*/*' }), voiceRoutes);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint
-app.get('/health', async (req, res) => {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    res.status(200).json({
-      status: 'OK',
-      db: 'OK',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-    });
-  } catch (e) {
-    res.status(500).json({ status: 'ERROR', db: 'ERROR' });
-  }
-});
+// Health check
+app.get('/api/health', (req, res) => {
+	res.json({ ok: true, env: process.env.NODE_ENV, mockVapi: process.env.MOCK_VAPI === 'true' })
+})
 
 // API routes
 app.use('/api/patients', patientRoutes);

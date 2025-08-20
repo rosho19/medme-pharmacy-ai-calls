@@ -4,6 +4,69 @@ import { CallStatus } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 import { initiateOutboundCall } from '../services/vapi';
 
+function getMockOutcome(patient: { name: string; address?: string | null }) {
+  const lower = (patient.name || '').toLowerCase();
+
+  if (lower.includes('chloe')) {
+    return {
+      summary:
+        'Patient available Wednesday 1–3 PM. No medication changes. No shipment issues reported.',
+      structuredData: {
+        availability: { day: 'Wednesday', window: '1–3 PM' },
+        medicationChanges: 'None',
+        shipmentIssues: 'None',
+        identityVerified: true,
+        success: true,
+      },
+      transcripts: [
+        { speaker: 'agent', text: 'Hello, this is the pharmacy calling to coordinate your delivery. May I verify your name and address?' },
+        { speaker: 'patient', text: 'Yes, this is correct. I can do Wednesday between 1 and 3 PM.' },
+        { speaker: 'agent', text: 'Great, I have you down for Wednesday 1–3 PM. No changes to medications, correct?' },
+        { speaker: 'patient', text: 'Correct. Everything is the same.' },
+      ],
+    };
+  }
+
+  if (lower.includes('ben')) {
+    return {
+      summary:
+        'Patient available Thursday 3–5 PM. Medication dose adjusted to 1000mg nightly starting next refill. No shipment issues reported.',
+      structuredData: {
+        availability: { day: 'Thursday', window: '3–5 PM' },
+        medicationChanges: 'Increase Metformin to 1000mg nightly next refill',
+        shipmentIssues: 'None',
+        identityVerified: true,
+        success: true,
+      },
+      transcripts: [
+        { speaker: 'agent', text: 'Hi, calling from the specialty pharmacy. Let us verify your name and address for security.' },
+        { speaker: 'patient', text: 'Details verified. I am available Thursday from 3 to 5 PM.' },
+        { speaker: 'agent', text: 'Any changes to your medications since last month?' },
+        { speaker: 'patient', text: 'My doctor increased Metformin to 1000mg nightly.' },
+      ],
+    };
+  }
+
+  // Default to Alice-style outcome
+  return {
+    summary:
+      'Patient available Friday 2–4 PM. No medication changes. Reported last delivery arrived 1 day late; medication intact.',
+    structuredData: {
+      availability: { day: 'Friday', window: '2–4 PM' },
+      medicationChanges: 'None',
+      shipmentIssues: 'Late by 1 day, contents OK',
+      identityVerified: true,
+      success: true,
+    },
+    transcripts: [
+      { speaker: 'agent', text: 'Hello, this is the pharmacy. May I confirm your name and delivery address?' },
+      { speaker: 'patient', text: 'Confirmed. I can do Friday between 2 and 4 PM.' },
+      { speaker: 'agent', text: 'Thanks. Any issues with your last delivery or changes to meds?' },
+      { speaker: 'patient', text: 'Last box came a day late, but everything was fine. No changes.' },
+    ],
+  };
+}
+
 // @desc    Get all calls
 // @route   GET /api/calls
 // @access  Public
@@ -102,6 +165,67 @@ export const createCall = async (req: Request, res: Response, next: NextFunction
         data: { patientName: patient.name, patientPhone: patient.phone },
       },
     });
+
+    // MOCK mode: bypass Vapi and simulate a successful call after 10 seconds
+    if (process.env.MOCK_VAPI === 'true') {
+      const updated = await prisma.call.update({
+        where: { id: call.id },
+        data: { status: CallStatus.IN_PROGRESS, callSid: `mock-${call.id}` },
+        include: { patient: { select: { id: true, name: true, phone: true } } },
+      });
+
+      await prisma.callLog.create({
+        data: {
+          callId: call.id,
+          eventType: 'MOCK_STARTED',
+          data: { note: 'Mock Vapi call started' },
+        },
+      });
+
+      const outcome = getMockOutcome(patient);
+
+      setTimeout(async () => {
+        try {
+          // Append transcript logs
+          for (const line of outcome.transcripts) {
+            await prisma.callLog.create({
+              data: { callId: call.id, eventType: 'TRANSCRIPT', data: line },
+            });
+          }
+
+          // Complete the call
+          await prisma.call.update({
+            where: { id: call.id },
+            data: {
+              status: CallStatus.COMPLETED,
+              summary: outcome.summary,
+              structuredData: outcome.structuredData as any,
+              completedAt: new Date(),
+            },
+          });
+
+          await prisma.callLog.create({
+            data: {
+              callId: call.id,
+              eventType: 'CALL_ENDED',
+              data: { reason: 'completed (mock)' },
+            },
+          });
+        } catch (mockErr) {
+          // Best-effort logging if something goes wrong during timeout
+          await prisma.callLog.create({
+            data: {
+              callId: call.id,
+              eventType: 'MOCK_ERROR',
+              data: { message: (mockErr as any)?.message || 'Unknown mock error' },
+            },
+          });
+        }
+      }, 10000);
+
+      res.status(201).json({ success: true, data: updated, message: 'Mock call started' });
+      return;
+    }
 
     // Integrate with Vapi to trigger actual call
     try {
