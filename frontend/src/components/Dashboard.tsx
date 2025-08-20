@@ -108,9 +108,9 @@ export function Dashboard() {
             <Phone className="h-4 w-4 mr-2 inline" />
             Start New Call
           </Link>
-          <Link className="btn-primary text-center" href="/calls?filter=issues">
-            <AlertCircle className="h-4 w-4 mr-2 inline" />
-            Needs Follow-up
+          <Link className="btn-primary text-center" href="/patients?new=1">
+            <Users className="h-4 w-4 mr-2 inline" />
+            Add Patient
           </Link>
           <Link className="btn-primary text-center" href="/calls">
             View All Calls
