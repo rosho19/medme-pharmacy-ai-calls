@@ -225,7 +225,12 @@ export function CallManagement() {
                   const Icon = config.icon
                   const patientName = call.patient?.name || 'Unknown Patient'
                   const duration = call.completedAt 
-                    ? Math.round((new Date(call.completedAt).getTime() - new Date(call.createdAt).getTime()) / 1000 / 60)
+                    ? (() => {
+                        const seconds = Math.max(0, Math.floor((new Date(call.completedAt).getTime() - new Date(call.createdAt).getTime()) / 1000))
+                        const mm = Math.floor(seconds / 60)
+                        const ss = seconds % 60
+                        return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+                      })()
                     : null
 
                   return (
@@ -257,7 +262,7 @@ export function CallManagement() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {duration ? `${duration} min` : '-'}
+                          {duration ?? '—'}
                         </div>
                       </td>
                       <td className="px-6 py-4">

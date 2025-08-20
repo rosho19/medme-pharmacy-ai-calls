@@ -133,8 +133,15 @@ export function CallDetails({ callId }: CallDetailsProps) {
   const config = statusConfig[call.status] || statusConfig.PENDING
   const Icon = config.icon
   const patientName = call.patient?.name || 'Unknown Patient'
-  const duration = call.completedAt 
-    ? Math.round((new Date(call.completedAt).getTime() - new Date(call.createdAt).getTime()) / 1000 / 60)
+  const duration = call.completedAt
+    ? (() => {
+        const createdTs = new Date(call.createdAt as string).getTime()
+        const completedTs = new Date(call.completedAt as string).getTime()
+        const seconds = Math.max(0, Math.floor((completedTs - createdTs) / 1000))
+        const mm = Math.floor(seconds / 60)
+        const ss = seconds % 60
+        return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+      })()
     : null
 
   return (
@@ -243,26 +250,26 @@ export function CallDetails({ callId }: CallDetailsProps) {
               <label className="block text-sm font-medium text-gray-700">Started</label>
               <p className="mt-1 text-sm text-gray-900 flex items-center">
                 <Calendar className="h-3 w-3 mr-1" />
-                {format(new Date(call.createdAt), 'MMMM d, yyyy h:mm a')}
+                {call.createdAt ? format(new Date(call.createdAt as string), 'MMMM d, yyyy h:mm a') : '—'}
               </p>
             </div>
             
-            {call.completedAt && (
+            {call.completedAt ? (
               <div>
                 <label className="block text-sm font-medium text-gray-700">Completed</label>
                 <p className="mt-1 text-sm text-gray-900 flex items-center">
                   <Calendar className="h-3 w-3 mr-1" />
-                  {format(new Date(call.completedAt), 'MMMM d, yyyy h:mm a')}
+                  {format(new Date(call.completedAt as string), 'MMMM d, yyyy h:mm a')}
                 </p>
               </div>
-            )}
+            ) : null}
             
             {duration !== null && duration !== undefined && (
               <div>
                 <label className="block text-sm font-medium text-gray-700">Duration</label>
                 <p className="mt-1 text-sm text-gray-900 flex items-center">
                   <Clock className="h-3 w-3 mr-1" />
-                  {duration} minutes
+                  {duration}
                 </p>
               </div>
             )}
@@ -360,37 +367,7 @@ export function CallDetails({ callId }: CallDetailsProps) {
         )}
       </div>
 
-      {/* Call Logs */}
-      {call.callLogs && call.callLogs.length > 0 && (
-        <div className="card p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Clock className="h-5 w-5 mr-2" />
-            Call Logs
-          </h2>
-          
-          <div className="space-y-4">
-            {call.callLogs.map((log) => (
-              <div key={log.id} className="border-l-4 border-blue-200 pl-4 py-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium text-gray-900">{log.eventType}</span>
-                    <span className="text-xs text-gray-500">
-                      {format(new Date(log.timestamp), 'MMM d, h:mm:ss a')}
-                    </span>
-                  </div>
-                </div>
-                {log.data && (
-                  <div className="mt-2 text-sm text-gray-600">
-                    <pre className="whitespace-pre-wrap">
-                      {JSON.stringify(log.data, null, 2)}
-                    </pre>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Transcript logs removed per requirements */}
     </div>
   )
 }
