@@ -4,8 +4,11 @@ import { CallStatus } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 import { initiateOutboundCall } from '../services/vapi';
 
-function getMockOutcome(patient: { name: string; address?: string | null }) {
+function getMockOutcome(patient: { name: string; address?: string | null; medicationInfo?: any }) {
   const lower = (patient.name || '').toLowerCase();
+  const primaryDrug = Array.isArray(patient.medicationInfo) && patient.medicationInfo.length > 0
+    ? String(patient.medicationInfo[0]?.drug || 'medication')
+    : 'medication';
 
   if (lower.includes('chloe')) {
     return {
@@ -15,17 +18,16 @@ function getMockOutcome(patient: { name: string; address?: string | null }) {
         availability: { day: 'Wednesday', window: '1–3 PM' },
         medicationChanges: 'None',
         shipmentIssues: 'None',
-        identityVerified: true,
         success: true,
       },
       transcripts: [
-        { speaker: 'agent', text: 'Hello, this is the pharmacy calling to coordinate your delivery. May I verify your full name and delivery address?' },
-        { speaker: 'patient', text: `My name is ${patient.name}. My address is ${patient.address || 'on file'}.` },
-        { speaker: 'agent', text: 'Thank you. Are there any changes to your medications since our last call?' },
+        { speaker: 'agent', text: 'Calling to coordinate your delivery today.' },
+        { speaker: 'agent', text: 'Any changes to your medications?' },
         { speaker: 'patient', text: 'No changes.' },
-        { speaker: 'agent', text: 'Great. What time window works best for delivery this week?' },
-        { speaker: 'patient', text: 'Wednesday between 1 and 3 PM works.' },
-        { speaker: 'agent', text: 'Perfect, I have you down for Wednesday 1–3 PM.' },
+        { speaker: 'agent', text: 'Any issues with your last shipment?' },
+        { speaker: 'patient', text: 'No issues.' },
+        { speaker: 'agent', text: 'What delivery window works this week?' },
+        { speaker: 'patient', text: 'Wednesday between 1 and 3 PM.' },
       ],
     };
   }
@@ -36,19 +38,18 @@ function getMockOutcome(patient: { name: string; address?: string | null }) {
         'Patient available Thursday 3–5 PM. Medication dose adjusted to 1000mg nightly starting next refill. No shipment issues reported.',
       structuredData: {
         availability: { day: 'Thursday', window: '3–5 PM' },
-        medicationChanges: 'Increase Metformin to 1000mg nightly next refill',
+        medicationChanges: `Increase ${primaryDrug} to 1000mg nightly next refill`,
         shipmentIssues: 'None',
-        identityVerified: true,
         success: true,
       },
       transcripts: [
-        { speaker: 'agent', text: 'Hi, this is the specialty pharmacy. For security, may I confirm your full name and delivery address?' },
-        { speaker: 'patient', text: `This is ${patient.name}. Address is ${patient.address || 'on file'}.` },
-        { speaker: 'agent', text: 'Thanks. Any changes to your medications since last month?' },
-        { speaker: 'patient', text: 'My doctor increased Metformin to 1000mg nightly.' },
-        { speaker: 'agent', text: 'Noted. What delivery window would you prefer?' },
+        { speaker: 'agent', text: 'Calling to confirm details for your upcoming delivery.' },
+        { speaker: 'agent', text: 'Any changes to your medications since last month?' },
+        { speaker: 'patient', text: `Yes, ${primaryDrug} increased to 1000mg nightly.` },
+        { speaker: 'agent', text: 'Noted. Any shipment issues previously?' },
+        { speaker: 'patient', text: 'No issues.' },
+        { speaker: 'agent', text: 'Preferred delivery window?' },
         { speaker: 'patient', text: 'Thursday 3 to 5 PM.' },
-        { speaker: 'agent', text: 'Confirmed: Thursday 3–5 PM.' },
       ],
     };
   }
@@ -61,17 +62,16 @@ function getMockOutcome(patient: { name: string; address?: string | null }) {
       availability: { day: 'Friday', window: '2–4 PM' },
       medicationChanges: 'None',
       shipmentIssues: 'Late by 1 day, contents OK',
-      identityVerified: true,
       success: true,
     },
     transcripts: [
-      { speaker: 'agent', text: 'Hello, this is the pharmacy. May I confirm your full name and delivery address?' },
-      { speaker: 'patient', text: `Yes, I am ${patient.name}. Address is ${patient.address || 'on file'}.` },
-      { speaker: 'agent', text: 'Thank you. Any issues with your last delivery or changes to your meds?' },
-      { speaker: 'patient', text: 'Last package came a day late, but medication was fine. No changes.' },
-      { speaker: 'agent', text: 'Understood. What delivery window works for you this week?' },
+      { speaker: 'agent', text: 'Calling to coordinate your medication delivery.' },
+      { speaker: 'agent', text: 'Any changes to your medications?' },
+      { speaker: 'patient', text: 'No changes.' },
+      { speaker: 'agent', text: 'Any issues with your last shipment?' },
+      { speaker: 'patient', text: 'It arrived a day late, but medication was fine.' },
+      { speaker: 'agent', text: 'What delivery window works this week?' },
       { speaker: 'patient', text: 'Friday between 2 and 4 PM.' },
-      { speaker: 'agent', text: 'Great, scheduling Friday 2–4 PM.' },
     ],
   };
 }
@@ -191,7 +191,7 @@ export const createCall = async (req: Request, res: Response, next: NextFunction
         },
       });
 
-      const outcome = getMockOutcome(patient);
+      const outcome = getMockOutcome(patient as any);
 
       setTimeout(async () => {
         try {
@@ -302,7 +302,7 @@ export const updateCallStatus = async (req: Request, res: Response, next: NextFu
 
     // In MOCK mode, if manually completing without provided summary, generate predetermined outcome instantly
     if (process.env.MOCK_VAPI === 'true' && status === CallStatus.COMPLETED && !summary && !structuredData) {
-      const outcome = getMockOutcome(call.patient);
+      const outcome = getMockOutcome(call.patient as any);
       // Append transcript logs before completion
       for (const line of outcome.transcripts) {
         await prisma.callLog.create({

@@ -14,8 +14,10 @@ const router = express.Router();
 const patientValidation = [
   body('name').notEmpty().withMessage('Name is required'),
   body('phone').isMobilePhone('any').withMessage('Valid phone number is required'),
-  body('address').optional().isString(),
-  body('medicationInfo').optional().isObject(),
+  body('address').notEmpty().withMessage('Address is required'),
+  body('medicationInfo').isArray({ min: 1 }).withMessage('At least one medication is required'),
+  body('medicationInfo.*.drug').isString().notEmpty().withMessage('Medication drug name is required'),
+  body('medicationInfo.*.dosage').isString().notEmpty().withMessage('Medication dosage is required'),
 ];
 
 // Routes
