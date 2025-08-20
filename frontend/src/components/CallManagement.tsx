@@ -153,7 +153,7 @@ export function CallManagement() {
                   <p className="text-sm font-medium text-gray-600">{config.text}</p>
                   <p className="text-2xl font-bold text-gray-900">{count}</p>
                 </div>
-                <div className={`p-2 rounded-full ${config.color}`}>
+                <div className={`p-2 rounded-full ${config.color} shadow-soft`}>
                   <Icon className="h-4 w-4" />
                 </div>
               </div>
