@@ -278,6 +278,7 @@ export const createCall = async (req: Request, res: Response, next: NextFunction
         });
       }
     } catch (vapiError: any) {
+      // If Vapi dispatch fails, automatically mark the call as FAILED and end the lifecycle
       await prisma.callLog.create({
         data: {
           callId: call.id,
@@ -285,8 +286,30 @@ export const createCall = async (req: Request, res: Response, next: NextFunction
           data: { message: vapiError?.message ?? 'Unknown Vapi error' },
         },
       });
+
+      const failedCall = await prisma.call.update({
+        where: { id: call.id },
+        data: {
+          status: CallStatus.FAILED,
+          completedAt: new Date(),
+          structuredData: { error: vapiError?.message ?? 'Unknown Vapi error' } as any,
+        },
+        include: { patient: { select: { id: true, name: true, phone: true } } },
+      });
+
+      await prisma.callLog.create({
+        data: {
+          callId: call.id,
+          eventType: 'CALL_ENDED',
+          data: { reason: 'failed' },
+        },
+      });
+
+      res.status(201).json({ success: true, data: failedCall, message: 'Call failed to initiate' });
+      return;
     }
 
+    // If dispatch succeeded (or no error thrown), return the created call
     res.status(201).json({ success: true, data: call, message: 'Call initiated successfully' });
   } catch (error) {
     next(error);

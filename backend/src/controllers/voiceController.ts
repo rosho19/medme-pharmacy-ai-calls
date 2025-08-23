@@ -74,29 +74,55 @@ const handleCallStarted = async (data: any) => {
 
 // Handle call ended event
 const handleCallEnded = async (data: any) => {
-  const { callId, summary, transcript, duration } = data;
+  const { callId, summary, transcript, duration, status, success, reason, error: errorInfo } = data;
 
   try {
     const call = await prisma.call.findFirst({ where: { callSid: callId } });
 
     if (call) {
-      await prisma.call.update({
-        where: { id: call.id },
-        data: {
-          status: CallStatus.COMPLETED,
-          summary: summary || 'Call completed',
-          structuredData: { transcript, duration, completedAt: new Date().toISOString() },
-          completedAt: new Date(),
-        },
-      });
+      const statusText = String(status || reason || '').toLowerCase();
+      const isFailed = success === false
+        || statusText.includes('fail')
+        || statusText.includes('cancel')
+        || Boolean(errorInfo);
 
-      await prisma.callLog.create({
-        data: {
-          callId: call.id,
-          eventType: 'CALL_ENDED',
-          data: { vapiCallId: callId, summary, transcript, duration },
-        },
-      });
+      if (isFailed) {
+        await prisma.call.update({
+          where: { id: call.id },
+          data: {
+            status: CallStatus.FAILED,
+            summary: summary || 'Call failed',
+            structuredData: { transcript, duration, reason, error: errorInfo, completedAt: new Date().toISOString() },
+            completedAt: new Date(),
+          },
+        });
+
+        await prisma.callLog.create({
+          data: {
+            callId: call.id,
+            eventType: 'CALL_ENDED',
+            data: { vapiCallId: callId, summary, transcript, duration, reason, error: errorInfo, result: 'failed' },
+          },
+        });
+      } else {
+        await prisma.call.update({
+          where: { id: call.id },
+          data: {
+            status: CallStatus.COMPLETED,
+            summary: summary || 'Call completed',
+            structuredData: { transcript, duration, completedAt: new Date().toISOString() },
+            completedAt: new Date(),
+          },
+        });
+
+        await prisma.callLog.create({
+          data: {
+            callId: call.id,
+            eventType: 'CALL_ENDED',
+            data: { vapiCallId: callId, summary, transcript, duration, result: 'completed' },
+          },
+        });
+      }
     }
   } catch (error) {
     console.error('Error handling call ended:', error);
