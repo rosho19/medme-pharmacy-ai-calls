@@ -104,9 +104,9 @@ export function Dashboard() {
       <div className="card p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link className="btn-primary text-center" href="/patients">
-            <Phone className="h-4 w-4 mr-2 inline" />
-            Start New Call
+          <Link className="btn-primary text-center" href="/calls/schedule">
+            <Clock className="h-4 w-4 mr-2 inline" />
+            Schedule Calls
           </Link>
           <Link className="btn-primary text-center" href="/patients?new=1">
             <Users className="h-4 w-4 mr-2 inline" />

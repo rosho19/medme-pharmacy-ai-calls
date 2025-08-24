@@ -13,9 +13,9 @@ export default function SchedulePage() {
   const [patientId, setPatientId] = useState('')
   const [date, setDate] = useState('')
   const [time, setTime] = useState('09:00')
-  const [retryIntervalMinutes, setRetryIntervalMinutes] = useState(60)
+  const [retryHours, setRetryHours] = useState<number>(1)
+  const [retryMins, setRetryMins] = useState<number>(0) // 0,15,30,45
   const [maxAttempts, setMaxAttempts] = useState(3)
-  const [voicemailTemplate, setVoicemailTemplate] = useState('Hello, this is {{pharmacyName}} calling about your medication. Please call us back at {{callbackNumber}}.')
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -32,12 +32,12 @@ export default function SchedulePage() {
     setSubmitting(true)
     try {
       const startAt = new Date(`${date}T${time}:00`)
+      const retryIntervalMinutes = (retryHours * 60) + retryMins
       const res = await api.post('/schedules', {
         patientId,
         startAt: startAt.toISOString(),
         retryIntervalMinutes,
         maxAttempts,
-        voicemailTemplate,
       })
       setMessage('Scheduled successfully')
     } catch (e: any) {
@@ -73,20 +73,27 @@ export default function SchedulePage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Time</label>
-                  <input type="time" className="input" value={time} onChange={(e) => setTime(e.target.value)} />
+                  <input type="time" step={900} className="input" value={time} onChange={(e) => setTime(e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Retry Interval (minutes)</label>
-                  <input type="number" min={5} max={1440} className="input" value={retryIntervalMinutes} onChange={(e) => setRetryIntervalMinutes(Number(e.target.value))} />
+                  <label className="block text-sm font-medium text-gray-700">Retry Interval</label>
+                  <div className="flex items-center space-x-3">
+                    <select className="input" value={retryHours} onChange={(e) => setRetryHours(Number(e.target.value))}>
+                      {Array.from({ length: 13 }).map((_, i) => (
+                        <option key={i} value={i}>{i} hr{i === 1 ? '' : 's'}</option>
+                      ))}
+                    </select>
+                    <select className="input" value={retryMins} onChange={(e) => setRetryMins(Number(e.target.value))}>
+                      {[0,15,30,45].map((m) => (
+                        <option key={m} value={m}>{m} min</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Max Attempts</label>
                   <input type="number" min={1} max={10} className="input" value={maxAttempts} onChange={(e) => setMaxAttempts(Number(e.target.value))} />
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Voicemail Template</label>
-                <textarea className="input min-h-[100px]" value={voicemailTemplate} onChange={(e) => setVoicemailTemplate(e.target.value)} />
               </div>
               <div className="flex items-center space-x-3">
                 <button onClick={submitSchedule} disabled={submitting} className="btn-primary">
