@@ -9,11 +9,13 @@ import dotenv from 'dotenv';
 import patientRoutes from './routes/patients';
 import callRoutes from './routes/calls';
 import voiceRoutes from './routes/voice';
+import scheduleRoutes from './routes/schedule';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
 import { prisma } from './utils/prisma';
+import { scheduler } from './services/scheduler';
 
 // Load environment variables
 dotenv.config();
@@ -75,6 +77,7 @@ app.get('/api/health', (req, res) => {
 // API routes
 app.use('/api/patients', patientRoutes);
 app.use('/api/calls', callRoutes);
+app.use('/api/schedules', scheduleRoutes);
 
 // 404 handler
 app.use(notFound);
@@ -87,6 +90,8 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  // Start scheduler (safe in single-process deploys)
+  scheduler.start();
 });
 
 export default app;

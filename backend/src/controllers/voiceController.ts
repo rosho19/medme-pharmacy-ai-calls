@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { CallStatus } from '@prisma/client';
 import { prisma } from '../utils/prisma';
+import { AttemptOutcome, ScheduleStatus } from '@prisma/client';
 
 // @desc    Handle Vapi webhook events
 // @route   POST /api/voice/webhook
@@ -65,6 +66,15 @@ const handleCallStarted = async (data: any) => {
             data: { vapiCallId: callId, phoneNumber },
           },
         });
+
+        // Mark corresponding attempt (if scheduled) as in-progress
+        if (call.scheduledCallId) {
+          const attempt = await prisma.callAttempt.findFirst({ where: { callId: call.id } })
+          if (attempt) {
+            await prisma.callAttempt.update({ where: { id: attempt.id }, data: { outcome: AttemptOutcome.IN_PROGRESS } })
+          }
+          await prisma.scheduledCall.update({ where: { id: call.scheduledCallId }, data: { status: ScheduleStatus.RUNNING } })
+        }
       }
     }
   } catch (error) {
@@ -104,6 +114,23 @@ const handleCallEnded = async (data: any) => {
             data: { vapiCallId: callId, summary, transcript, duration, reason, error: errorInfo, result: 'failed' },
           },
         });
+
+        // Update attempt and schedule
+        if (call.scheduledCallId) {
+          const attempt = await prisma.callAttempt.findFirst({ where: { callId: call.id } })
+          if (attempt) {
+            await prisma.callAttempt.update({ where: { id: attempt.id }, data: { outcome: AttemptOutcome.FAILED, endedAt: new Date() } })
+          }
+          const sched = await prisma.scheduledCall.findUnique({ where: { id: call.scheduledCallId } })
+          if (sched) {
+            if (sched.attemptsMade >= sched.maxAttempts) {
+              await prisma.scheduledCall.update({ where: { id: sched.id }, data: { status: ScheduleStatus.FAILED } })
+            } else {
+              // keep RUNNING; nextAttemptAt already set by scheduler when attempt created
+              await prisma.scheduledCall.update({ where: { id: sched.id }, data: { status: ScheduleStatus.RUNNING } })
+            }
+          }
+        }
       } else {
         await prisma.call.update({
           where: { id: call.id },
@@ -122,6 +149,15 @@ const handleCallEnded = async (data: any) => {
             data: { vapiCallId: callId, summary, transcript, duration, result: 'completed' },
           },
         });
+
+        // Update attempt and schedule
+        if (call.scheduledCallId) {
+          const attempt = await prisma.callAttempt.findFirst({ where: { callId: call.id } })
+          if (attempt) {
+            await prisma.callAttempt.update({ where: { id: attempt.id }, data: { outcome: AttemptOutcome.ANSWERED, endedAt: new Date() } })
+          }
+          await prisma.scheduledCall.update({ where: { id: call.scheduledCallId }, data: { status: ScheduleStatus.COMPLETED } })
+        }
       }
     }
   } catch (error) {

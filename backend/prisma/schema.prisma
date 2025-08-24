@@ -19,9 +19,11 @@ model Patient {
   medicationInfo  Json?    @map("medication_info")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
+  callPreferences Json?    @map("call_preferences")
   
   // Relations
   calls           Call[]
+  scheduledCalls  ScheduledCall[]
   
   @@map("patients")
 }
@@ -35,10 +37,13 @@ model Call {
   structuredData Json?       @map("structured_data")
   createdAt      DateTime    @default(now()) @map("created_at")
   completedAt    DateTime?   @map("completed_at")
+  scheduledCallId String?     @map("scheduled_call_id")
   
   // Relations
   patient        Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
   callLogs       CallLog[]
+  scheduledCall  ScheduledCall? @relation(fields: [scheduledCallId], references: [id], onDelete: SetNull)
+  attempts       CallAttempt[]
   
   @@map("calls")
 }
@@ -71,6 +76,62 @@ enum CallStatus {
   PENDING
   IN_PROGRESS
   COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model ScheduledCall {
+  id                   String           @id @default(cuid())
+  patientId            String           @map("patient_id")
+  startAt              DateTime         @map("start_at")
+  retryIntervalMinutes Int              @default(60) @map("retry_interval_minutes")
+  maxAttempts          Int              @default(3)  @map("max_attempts")
+  attemptsMade         Int              @default(0)  @map("attempts_made")
+  nextAttemptAt        DateTime         @map("next_attempt_at")
+  status               ScheduleStatus   @default(SCHEDULED)
+  voicemailTemplate    String?          @map("voicemail_template")
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  patient              Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  attempts             CallAttempt[]
+  calls                Call[]
+
+  @@map("scheduled_calls")
+}
+
+model CallAttempt {
+  id              String         @id @default(cuid())
+  scheduledCallId String         @map("scheduled_call_id")
+  attemptNumber   Int            @map("attempt_number")
+  callId          String?        @map("call_id")
+  startedAt       DateTime       @default(now()) @map("started_at")
+  endedAt         DateTime?      @map("ended_at")
+  outcome         AttemptOutcome @default(IN_PROGRESS)
+  notes           String?
+
+  // Relations
+  scheduledCall   ScheduledCall  @relation(fields: [scheduledCallId], references: [id], onDelete: Cascade)
+  call            Call?          @relation(fields: [callId], references: [id], onDelete: SetNull)
+
+  @@map("call_attempts")
+}
+
+enum ScheduleStatus {
+  SCHEDULED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum AttemptOutcome {
+  IN_PROGRESS
+  ANSWERED
+  NO_ANSWER
+  BUSY
+  VOICEMAIL_LEFT
   FAILED
   CANCELLED
 }

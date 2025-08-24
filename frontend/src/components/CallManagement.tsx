@@ -103,6 +103,10 @@ export function CallManagement() {
             <User className="h-4 w-4 mr-2" />
             Manage Patients
           </Link>
+          <Link href="/calls/schedule" className="btn-primary">
+            <Calendar className="h-4 w-4 mr-2" />
+            Schedule Calls
+          </Link>
         </div>
       </div>
 
