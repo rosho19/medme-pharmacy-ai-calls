@@ -215,7 +215,7 @@ export const createCall = async (req: Request, res: Response, next: NextFunction
 			return;
 		}
 
-		res.status(201).json({ success: true, data: call, message: 'Call initiated successfully' });
+		res.status(201).json({ success: true, data: call, message: 'Call initiated' });
 	} catch (error) {
 		next(error);
 	}

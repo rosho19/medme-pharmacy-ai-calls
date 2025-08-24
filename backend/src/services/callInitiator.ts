@@ -45,7 +45,11 @@ export async function createAndDispatchCall(patientId: string, options: Initiate
     })
 
     if ((vapiResult as any)?.id) {
-      await prisma.call.update({ where: { id: call.id }, data: { callSid: String((vapiResult as any).id) } })
+      const updated = await prisma.call.update({
+        where: { id: call.id },
+        data: { callSid: String((vapiResult as any).id), status: CallStatus.IN_PROGRESS },
+        include: { patient: { select: { id: true, name: true, phone: true } } },
+      })
       await prisma.callLog.create({
         data: {
           callId: call.id,
@@ -53,21 +57,20 @@ export async function createAndDispatchCall(patientId: string, options: Initiate
           data: { vapiCallId: (vapiResult as any).id, status: (vapiResult as any)?.status },
         },
       })
+      return updated
     }
   } catch (vapiError: any) {
     await prisma.callLog.create({
       data: { callId: call.id, eventType: 'VAPI_ERROR', data: { message: vapiError?.message ?? 'Unknown Vapi error' } },
     })
-
-    const failedCall = await prisma.call.update({
+    // Keep call in PENDING on dispatch error; webhook may still arrive from provider
+    // Attach the error to structuredData for observability
+    const pending = await prisma.call.update({
       where: { id: call.id },
-      data: { status: CallStatus.FAILED, completedAt: new Date(), structuredData: { error: vapiError?.message ?? 'Unknown Vapi error' } as any },
+      data: { structuredData: { ...(call.structuredData as any), dispatchError: vapiError?.message ?? 'Unknown Vapi error' } as any },
       include: { patient: { select: { id: true, name: true, phone: true } } },
     })
-
-    await prisma.callLog.create({ data: { callId: call.id, eventType: 'CALL_ENDED', data: { reason: 'failed' } } })
-
-    return failedCall
+    return pending
   }
 
   return call
