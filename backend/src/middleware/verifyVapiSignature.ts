@@ -58,8 +58,12 @@ export function verifyVapiSignature(req: Request, res: Response, next: NextFunct
 
 	const ok = timingSafeEqualStr(providedNormalized, hex) || timingSafeEqualStr(providedNormalized, b64)
 	if (!ok) {
-		res.status(401).json({ success: false, error: 'Invalid webhook signature' })
-		return
+		if (process.env.VAPI_WEBHOOK_ALLOW_UNVERIFIED === 'true') {
+			console.warn('VAPI webhook signature verification failed; proceeding due to VAPI_WEBHOOK_ALLOW_UNVERIFIED=true')
+		} else {
+			res.status(401).json({ success: false, error: 'Invalid webhook signature' })
+			return
+		}
 	}
 
 	// Parse JSON after verification so downstream handlers receive an object

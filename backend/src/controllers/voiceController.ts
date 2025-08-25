@@ -8,7 +8,9 @@ import { AttemptOutcome, ScheduleStatus } from '@prisma/client';
 // @access  Public (but should be secured with webhook secret)
 export const handleVapiWebhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { event, data } = req.body as any;
+    const rawBody = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : undefined
+    const parsed = rawBody ? JSON.parse(rawBody) : (req.body as any)
+    const { event, data } = parsed as any
 
     // TODO: Verify webhook signature with VAPI_WEBHOOK_SECRET
     // const signature = req.headers['x-vapi-signature'] as string | undefined
@@ -22,6 +24,12 @@ export const handleVapiWebhook = async (req: Request, res: Response, next: NextF
         break;
       case 'call-ended':
         await handleCallEnded(data);
+        break;
+      case 'queued':
+      case 'ringing':
+      case 'answered':
+        // Treat as started/ringing
+        await handleCallProgress(data)
         break;
       case 'transcript':
         await handleTranscript(data);
@@ -42,16 +50,19 @@ export const handleVapiWebhook = async (req: Request, res: Response, next: NextF
 
 // Handle call started event
 const handleCallStarted = async (data: any) => {
-  const { callId, phoneNumber } = data;
+  const callId = data.callId || data.id || data.vapiCallId
+  const phoneNumber = data.phoneNumber || data.customer?.number || data.to
 
   try {
-    const patient = await prisma.patient.findUnique({ where: { phone: phoneNumber } });
+    const patient = phoneNumber ? await prisma.patient.findUnique({ where: { phone: phoneNumber } }) : null;
 
     if (patient) {
-      const call = await prisma.call.findFirst({
-        where: { patientId: patient.id, status: CallStatus.PENDING },
-        orderBy: { createdAt: 'desc' },
-      });
+      let call = await prisma.call.findFirst({ where: { patientId: patient.id, status: CallStatus.PENDING }, orderBy: { createdAt: 'desc' } });
+
+      // Fallback: locate by recent pending/in_progress without callSid
+      if (!call) {
+        call = await prisma.call.findFirst({ where: { patientId: patient.id, status: { in: [CallStatus.PENDING, CallStatus.IN_PROGRESS] } }, orderBy: { createdAt: 'desc' } })
+      }
 
       if (call) {
         await prisma.call.update({
@@ -82,12 +93,45 @@ const handleCallStarted = async (data: any) => {
   }
 };
 
+// Handle progress/ringing events
+const handleCallProgress = async (data: any) => {
+  const { callId, phoneNumber, status } = data
+  try {
+    const call = await prisma.call.findFirst({ where: { callSid: callId } })
+    if (call) {
+      if (call.status !== CallStatus.IN_PROGRESS) {
+        await prisma.call.update({ where: { id: call.id }, data: { status: CallStatus.IN_PROGRESS } })
+      }
+      await prisma.callLog.create({
+        data: { callId: call.id, eventType: 'CALL_PROGRESS', data: { vapiCallId: callId, phoneNumber, status } },
+      })
+    }
+  } catch (error) {
+    console.error('Error handling call progress:', error)
+  }
+}
+
 // Handle call ended event
 const handleCallEnded = async (data: any) => {
-  const { callId, summary, transcript, duration, status, success, reason, error: errorInfo } = data;
+  const callId = data.callId || data.id || data.vapiCallId
+  const summary = data.summary || data.assistantSummary || data.result?.summary || data.output?.summary
+  const transcript = data.transcript || data.fullTranscript || data.result?.transcript
+  const duration = data.duration || data.durationSeconds || data.callDurationSeconds
+  const status = data.status || data.state
+  const success = (data.successEvaluation !== undefined ? data.successEvaluation : (data.success ?? data.result?.success))
+  const reason = data.reason || data.endedReason || data.endReason
+  const errorInfo = data.error || data.errorMessage
+  const hangupBy = data.hangupBy || data.endedBy
 
   try {
-    const call = await prisma.call.findFirst({ where: { callSid: callId } });
+    let call = await prisma.call.findFirst({ where: { callSid: callId } });
+    if (!call && (data.metadata?.patientId || data.patientId)) {
+      const pid = data.metadata?.patientId || data.patientId
+      call = await prisma.call.findFirst({ where: { patientId: pid, status: { in: [CallStatus.PENDING, CallStatus.IN_PROGRESS] } }, orderBy: { createdAt: 'desc' } })
+      if (call && !call.callSid && callId) {
+        await prisma.call.update({ where: { id: call.id }, data: { callSid: callId } })
+      }
+    }
 
     if (call) {
       const statusText = String(status || reason || '').toLowerCase();
@@ -102,7 +146,7 @@ const handleCallEnded = async (data: any) => {
           data: {
             status: CallStatus.FAILED,
             summary: summary || 'Call failed',
-            structuredData: { transcript, duration, reason, error: errorInfo, completedAt: new Date().toISOString() },
+            structuredData: { transcript, duration, reason, error: errorInfo, hangupBy, completedAt: new Date().toISOString() },
             completedAt: new Date(),
           },
         });
@@ -111,7 +155,7 @@ const handleCallEnded = async (data: any) => {
           data: {
             callId: call.id,
             eventType: 'CALL_ENDED',
-            data: { vapiCallId: callId, summary, transcript, duration, reason, error: errorInfo, result: 'failed' },
+            data: { vapiCallId: callId, summary, transcript, duration, reason, error: errorInfo, hangupBy, result: 'failed' },
           },
         });
 
