@@ -116,7 +116,7 @@ const handleCallEnded = async (data: any) => {
   const callId = data.callId || data.id || data.vapiCallId
   const summary = data.summary || data.assistantSummary || data.result?.summary || data.output?.summary
   const transcript = data.transcript || data.fullTranscript || data.result?.transcript
-  const duration = data.duration || data.durationSeconds || data.callDurationSeconds
+  const duration = Number(data.duration || data.durationSeconds || data.callDurationSeconds || 0)
   const status = data.status || data.state
   const success = (data.successEvaluation !== undefined ? data.successEvaluation : (data.success ?? data.result?.success))
   const reason = data.reason || data.endedReason || data.endReason
@@ -141,13 +141,14 @@ const handleCallEnded = async (data: any) => {
         || Boolean(errorInfo);
 
       if (isFailed) {
+        const computedCompletedAt = duration > 0 ? new Date(call.createdAt.getTime() + duration * 1000) : new Date()
         await prisma.call.update({
           where: { id: call.id },
           data: {
             status: CallStatus.FAILED,
             summary: summary || 'Call failed',
-            structuredData: { transcript, duration, reason, error: errorInfo, hangupBy, completedAt: new Date().toISOString() },
-            completedAt: new Date(),
+            structuredData: { transcript, duration, reason, error: errorInfo, hangupBy, completedAt: computedCompletedAt.toISOString() },
+            completedAt: computedCompletedAt,
           },
         });
 
@@ -176,13 +177,14 @@ const handleCallEnded = async (data: any) => {
           }
         }
       } else {
+        const computedCompletedAt = duration > 0 ? new Date(call.createdAt.getTime() + duration * 1000) : new Date()
         await prisma.call.update({
           where: { id: call.id },
           data: {
             status: CallStatus.COMPLETED,
             summary: summary || 'Call completed',
-            structuredData: { transcript, duration, completedAt: new Date().toISOString() },
-            completedAt: new Date(),
+            structuredData: { transcript, duration, completedAt: computedCompletedAt.toISOString() },
+            completedAt: computedCompletedAt,
           },
         });
 
