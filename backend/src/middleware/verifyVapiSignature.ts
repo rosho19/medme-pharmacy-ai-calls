@@ -39,6 +39,12 @@ export function verifyVapiSignature(req: Request, res: Response, next: NextFunct
 		return
 	}
 
+	// 0) Simple shared-secret bypass for integrations like Make: if x-webhook-secret matches, accept
+	const sharedHeader = req.header('x-webhook-secret')
+	if (sharedHeader && sharedHeader === secret) {
+		return next()
+	}
+
 	const provided = extractSignature(req)
 	if (!provided) {
 		res.status(401).json({ success: false, error: 'Missing signature header' })

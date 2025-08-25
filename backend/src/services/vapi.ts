@@ -44,3 +44,38 @@ export async function initiateOutboundCall(params: OutboundCallParams): Promise<
 
 	return (await res.json()) as OutboundCallResult;
 } 
+
+export interface VapiCallDetails {
+  id?: string
+  status?: string
+  state?: string
+  endedReason?: string
+  endReason?: string
+  assistantSummary?: string
+  result?: { summary?: string; success?: boolean; transcript?: any }
+  output?: { summary?: string }
+  successEvaluation?: boolean
+  durationSeconds?: number
+  callDurationSeconds?: number
+  transcript?: any
+  error?: string
+  errorMessage?: string
+  [key: string]: unknown
+}
+
+export async function fetchVapiCall(callId: string): Promise<VapiCallDetails> {
+  const apiKey = process.env.VAPI_API_KEY
+  if (!apiKey) throw new Error('VAPI_API_KEY is not set')
+  const baseUrl = process.env.VAPI_BASE_URL || 'https://api.vapi.ai'
+  const endpoint = `${baseUrl.replace(/\/$/, '')}/call/${encodeURIComponent(callId)}`
+
+  const res = await fetch(endpoint, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Vapi get call failed: ${res.status} ${text}`)
+  }
+  return (await res.json()) as VapiCallDetails
+}
