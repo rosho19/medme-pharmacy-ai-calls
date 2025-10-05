@@ -23,19 +23,6 @@ export async function createAndDispatchCall(patientId: string, options: Initiate
     },
   })
 
-  if (process.env.MOCK_VAPI === 'true') {
-    const updated = await prisma.call.update({
-      where: { id: call.id },
-      data: { status: CallStatus.IN_PROGRESS, callSid: `mock-${call.id}` },
-      include: { patient: { select: { id: true, name: true, phone: true } } },
-    })
-
-    await prisma.callLog.create({
-      data: { callId: call.id, eventType: 'MOCK_STARTED', data: { note: 'Mock Vapi call started' } },
-    })
-
-    return updated
-  }
 
   try {
     const vapiResult = await initiateOutboundCall({

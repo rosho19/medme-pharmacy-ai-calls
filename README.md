@@ -1,18 +1,18 @@
 # Pharmacy AI Voice Calling System
 
-A comprehensive AI-powered voice calling system MVP designed for specialty pharmacies to automate patient communications for delivery confirmations and medication updates.
+A comprehensive AI-powered voice calling system designed for specialty pharmacies to automate patient communications for delivery confirmations and medication updates.
 
-## 🏗️ Architecture Overview
+## Architecture
 
-This project follows a clean, scalable architecture with:
+This project uses a modern full-stack architecture:
 
 - **Frontend**: Next.js 14 with TypeScript and Tailwind CSS
 - **Backend**: Node.js/Express with TypeScript and PostgreSQL
 - **Database**: PostgreSQL with Prisma ORM
-- **Voice Integration**: Ready for Vapi integration
+- **Voice Integration**: Vapi integration for AI voice calls
 - **Deployment**: Configured for Vercel (frontend) + Railway/Render (backend)
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 pharmacy-ai-calls/
@@ -27,33 +27,30 @@ pharmacy-ai-calls/
 │   │   ├── hooks/           # Custom React hooks
 │   │   ├── utils/           # Utility functions
 │   │   └── types/           # TypeScript type definitions
-│   ├── public/              # Static assets
 │   └── package.json
 ├── backend/                  # Node.js/Express backend API
 │   ├── src/
 │   │   ├── routes/          # API route definitions
 │   │   ├── controllers/     # Request handlers
-│   │   ├── models/          # Data models (Prisma)
 │   │   ├── services/        # Business logic
 │   │   ├── middleware/      # Express middleware
 │   │   └── utils/           # Utility functions
 │   ├── database/
-│   │   ├── migrations/      # Database migrations
 │   │   └── seeds/           # Database seed files
-│   ├── prisma/              # Prisma schema and config
+│   ├── prisma/              # Prisma schema and migrations
 │   └── package.json
 └── README.md
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
 - Node.js 18+ installed
-- PostgreSQL database running
+- PostgreSQL database (or Neon DB)
 - Git installed
 
-### 1. Clone and Setup
+### Installation
 
 ```bash
 # Clone the repository
@@ -69,7 +66,7 @@ cd ../frontend
 npm install
 ```
 
-### 2. Database Setup
+### Database Setup
 
 ```bash
 # Navigate to backend directory
@@ -91,25 +88,27 @@ npm run db:migrate
 npm run db:seed
 ```
 
-### 3. Environment Configuration
+### Environment Configuration
 
 #### Backend (.env)
 ```env
 DATABASE_URL="postgresql://username:password@localhost:5432/pharmacy_calls"
+SHADOW_DATABASE_URL="postgresql://username:password@localhost:5432/pharmacy_calls_shadow"
 PORT=3001
 NODE_ENV=development
 FRONTEND_URL=http://localhost:3000
 VAPI_API_KEY=your_vapi_key_here
+VAPI_ASSISTANT_ID=your_vapi_assistant_id
 VAPI_WEBHOOK_SECRET=your_webhook_secret_here
-JWT_SECRET=your_jwt_secret_here_change_in_production
+VAPI_WEBHOOK_URL=http://localhost:3001/api/voice/webhook
 ```
 
-#### Frontend (.env.local)
+#### Frontend (.env.example)
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:3001/api
 ```
 
-### 4. Start Development Servers
+### Development
 
 ```bash
 # Terminal 1: Start backend server
@@ -126,7 +125,7 @@ The application will be available at:
 - Backend API: http://localhost:3001
 - API Health Check: http://localhost:3001/health
 
-## 📊 Database Schema
+## Database Schema
 
 ### Core Entities
 
@@ -136,6 +135,7 @@ The application will be available at:
 - `phone`: Phone number (unique)
 - `address`: Patient address
 - `medicationInfo`: JSON field for medication details
+- `callPreferences`: JSON field for calling preferences
 - `createdAt`, `updatedAt`: Timestamps
 
 #### Calls
@@ -145,6 +145,7 @@ The application will be available at:
 - `callSid`: Vapi call identifier
 - `summary`: Call summary
 - `structuredData`: JSON field for call data
+- `scheduledCallId`: Reference to scheduled call (optional)
 - `createdAt`, `completedAt`: Timestamps
 
 #### Call Logs
@@ -154,14 +155,36 @@ The application will be available at:
 - `data`: JSON field for event data
 - `timestamp`: Event timestamp
 
-#### Pharmacists (Future Use)
+#### Scheduled Calls
+- `id`: Unique identifier
+- `patientId`: Reference to patient
+- `startAt`: When to start calling
+- `retryIntervalMinutes`: Minutes between retry attempts
+- `maxAttempts`: Maximum number of attempts
+- `attemptsMade`: Current number of attempts
+- `nextAttemptAt`: When to make the next attempt
+- `status`: Schedule status (SCHEDULED, RUNNING, COMPLETED, FAILED, CANCELLED)
+- `voicemailTemplate`: Custom voicemail template
+- `createdAt`, `updatedAt`: Timestamps
+
+#### Call Attempts
+- `id`: Unique identifier
+- `scheduledCallId`: Reference to scheduled call
+- `attemptNumber`: Which attempt this is
+- `callId`: Reference to actual call (optional)
+- `startedAt`: When attempt started
+- `endedAt`: When attempt ended
+- `outcome`: Attempt outcome (IN_PROGRESS, ANSWERED, NO_ANSWER, BUSY, VOICEMAIL_LEFT, FAILED, CANCELLED)
+- `notes`: Additional notes
+
+#### Pharmacists
 - `id`: Unique identifier
 - `name`: Pharmacist name
 - `email`: Email address
 - `pharmacyId`: Pharmacy identifier
 - `createdAt`, `updatedAt`: Timestamps
 
-## 🔌 API Endpoints
+## API Endpoints
 
 ### Patients
 - `GET /api/patients` - List patients with pagination and search
@@ -177,10 +200,16 @@ The application will be available at:
 - `PATCH /api/calls/:id/status` - Update call status
 - `DELETE /api/calls/:id` - Delete call
 
+### Scheduled Calls
+- `GET /api/schedules` - List scheduled calls
+- `GET /api/schedules/:id` - Get single scheduled call
+- `POST /api/schedules` - Create new scheduled call
+- `POST /api/schedules/:id/cancel` - Cancel scheduled call
+
 ### Voice (Vapi Webhooks)
 - `POST /api/voice/webhook` - Handle Vapi webhook events
 
-## 🎨 Frontend Features
+## Frontend Features
 
 ### Dashboard
 - Real-time statistics (patients, calls, success rate)
@@ -192,10 +221,15 @@ The application will be available at:
 - Add/edit patient forms
 - Patient call history
 
-### Call Interface
+### Call Management
 - Trigger AI calls for patients
 - Monitor call status in real-time
 - View call transcripts and summaries
+
+### Scheduled Calls
+- Create scheduled call campaigns
+- Monitor retry attempts
+- Track call outcomes
 
 ### Components
 - Responsive design with Tailwind CSS
@@ -203,7 +237,7 @@ The application will be available at:
 - Form validation with react-hook-form
 - State management with React Query
 
-## 🔧 Development Scripts
+## Development Scripts
 
 ### Backend
 ```bash
@@ -226,7 +260,7 @@ npm run lint         # Run ESLint
 npm run type-check   # Run TypeScript type checking
 ```
 
-## 🚀 Deployment
+## Deployment
 
 ### Frontend (Vercel)
 1. Connect your GitHub repository to Vercel
@@ -241,34 +275,11 @@ npm run type-check   # Run TypeScript type checking
 
 ### Environment Variables for Production
 - Update `FRONTEND_URL` to your production frontend URL
-- Set secure `JWT_SECRET`
 - Configure production `DATABASE_URL`
 - Add your Vapi API credentials
 
-## 🔐 Security Features
+## Response Format
 
-- Helmet.js for security headers
-- CORS configuration
-- Rate limiting
-- Input validation with Zod
-- Environment variable protection
-- Webhook signature verification (ready for Vapi)
-
-## 🧪 Testing
-
-```bash
-# Backend testing (when implemented)
-cd backend
-npm test
-
-# Frontend testing (when implemented)
-cd frontend
-npm test
-```
-
-## 📝 API Documentation
-
-### Response Format
 All API responses follow this structure:
 ```json
 {
@@ -279,49 +290,6 @@ All API responses follow this structure:
 }
 ```
 
-### Error Handling
-- Consistent HTTP status codes
-- Detailed error messages
-- Validation error details
-- Stack traces in development mode
+## License
 
-## 🔮 Future Enhancements
-
-- [ ] User authentication and authorization
-- [ ] Real-time notifications with WebSockets
-- [ ] Advanced analytics and reporting
-- [ ] Multi-pharmacy support
-- [ ] Mobile app development
-- [ ] Integration with pharmacy management systems
-- [ ] Advanced AI conversation flows
-- [ ] Call recording and playback
-- [ ] Automated follow-up scheduling
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🆘 Support
-
-For support and questions:
-- Create an issue in the GitHub repository
-- Check the documentation
-- Review the API endpoints and examples
-
-## 🏥 Healthcare Compliance
-
-This system is designed with healthcare data privacy in mind:
-- Secure data handling practices
-- Environment variable protection
-- Input validation and sanitization
-- Audit logging capabilities
-
-**Note**: Ensure compliance with HIPAA and other relevant healthcare regulations in your deployment.
+This project is licensed under the MIT License.

@@ -5,77 +5,6 @@ import { prisma } from '../utils/prisma';
 import { initiateOutboundCall } from '../services/vapi';
 import { createAndDispatchCall } from '../services/callInitiator';
 
-function getMockOutcome(patient: { name: string; address?: string | null; medicationInfo?: any }) {
-	const lower = (patient.name || '').toLowerCase();
-	const primaryDrug = Array.isArray(patient.medicationInfo) && patient.medicationInfo.length > 0
-		? String(patient.medicationInfo[0]?.drug || 'medication')
-		: 'medication';
-
-	if (lower.includes('chloe')) {
-		return {
-			summary:
-				'Patient available Wednesday 1–3 PM. No medication changes. No shipment issues reported.',
-			structuredData: {
-				availability: { day: 'Wednesday', window: '1–3 PM' },
-				medicationChanges: 'None',
-				shipmentIssues: 'None',
-				success: true,
-			},
-			transcripts: [
-				{ speaker: 'agent', text: 'Calling to coordinate your delivery today.' },
-				{ speaker: 'agent', text: 'Any changes to your medications?' },
-				{ speaker: 'patient', text: 'No changes.' },
-				{ speaker: 'agent', text: 'Any issues with your last shipment?' },
-				{ speaker: 'patient', text: 'No issues.' },
-				{ speaker: 'agent', text: 'What delivery window works this week?' },
-				{ speaker: 'patient', text: 'Wednesday between 1 and 3 PM.' },
-			],
-		};
-	}
-
-	if (lower.includes('ben')) {
-		return {
-			summary:
-				'Patient available Thursday 3–5 PM. Medication dose adjusted to 1000mg nightly starting next refill. No shipment issues reported.',
-			structuredData: {
-				availability: { day: 'Thursday', window: '3–5 PM' },
-				medicationChanges: `Increase ${primaryDrug} to 1000mg nightly next refill`,
-				shipmentIssues: 'None',
-				success: true,
-			},
-			transcripts: [
-				{ speaker: 'agent', text: 'Calling to confirm details for your upcoming delivery.' },
-				{ speaker: 'agent', text: 'Any changes to your medications since last month?' },
-				{ speaker: 'patient', text: `Yes, ${primaryDrug} increased to 1000mg nightly.` },
-				{ speaker: 'agent', text: 'Noted. Any shipment issues previously?' },
-				{ speaker: 'patient', text: 'No issues.' },
-				{ speaker: 'agent', text: 'Preferred delivery window?' },
-				{ speaker: 'patient', text: 'Thursday 3 to 5 PM.' },
-			],
-		};
-	}
-
-	// Default (Alice-style) outcome
-	return {
-		summary:
-			'Patient available Friday 2–4 PM. No medication changes. Reported last delivery arrived 1 day late; medication intact.',
-		structuredData: {
-			availability: { day: 'Friday', window: '2–4 PM' },
-			medicationChanges: 'None',
-			shipmentIssues: 'Late by 1 day, contents OK',
-			success: true,
-		},
-		transcripts: [
-			{ speaker: 'agent', text: 'Calling to coordinate your medication delivery.' },
-			{ speaker: 'agent', text: 'Any changes to your medications?' },
-			{ speaker: 'patient', text: 'No changes.' },
-			{ speaker: 'agent', text: 'Any issues with your last shipment?' },
-			{ speaker: 'patient', text: 'It arrived a day late, but medication was fine.' },
-			{ speaker: 'agent', text: 'What delivery window works this week?' },
-			{ speaker: 'patient', text: 'Friday between 2 and 4 PM.' },
-		],
-	};
-}
 
 // @desc    Get all calls
 // @route   GET /api/calls
@@ -167,53 +96,6 @@ export const createCall = async (req: Request, res: Response, next: NextFunction
 
 		const call = await createAndDispatchCall(patientId)
 
-		// MOCK flow still adds the post-dispatch simulation (already handled by service for status/logs)
-		if (process.env.MOCK_VAPI === 'true') {
-			const patient = await prisma.patient.findUnique({ where: { id: patientId } })
-			const outcome = getMockOutcome(patient as any);
-
-			setTimeout(async () => {
-				try {
-					const latest = await prisma.call.findUnique({ where: { id: call.id } });
-					if (latest && latest.status === CallStatus.COMPLETED && latest.summary) {
-						return;
-					}
-
-					const verification = [
-						{ speaker: 'agent', text: 'For security, may I verify your details on file?' },
-						{ speaker: 'patient', text: 'Confirmed.' },
-					];
-					for (const line of verification.concat(outcome.transcripts)) {
-						await prisma.callLog.create({
-							data: { callId: call.id, eventType: 'TRANSCRIPT', data: line },
-						});
-					}
-
-					const created = latest?.createdAt || new Date();
-					const durationSec = 60 + Math.floor(Math.random() * 61);
-					await prisma.call.update({
-						where: { id: call.id },
-						data: {
-							status: CallStatus.COMPLETED,
-							summary: outcome.summary,
-							structuredData: outcome.structuredData as any,
-							completedAt: new Date(created.getTime() + durationSec * 1000),
-						},
-					});
-
-					await prisma.callLog.create({
-						data: { callId: call.id, eventType: 'CALL_ENDED', data: { reason: 'completed' } },
-					});
-				} catch (mockErr) {
-					await prisma.callLog.create({
-						data: { callId: call.id, eventType: 'MOCK_ERROR', data: { message: (mockErr as any)?.message || 'Unknown mock error' } },
-					});
-				}
-			}, 10000);
-
-			res.status(201).json({ success: true, data: call, message: 'Mock call started' });
-			return;
-		}
 
 		res.status(201).json({ success: true, data: call, message: 'Call initiated' });
 	} catch (error) {
@@ -242,27 +124,15 @@ export const updateCallStatus = async (req: Request, res: Response, next: NextFu
 
 		const updateData: any = { status };
 
-		if (process.env.MOCK_VAPI === 'true' && status === CallStatus.COMPLETED && !summary && !structuredData) {
-			const outcome = getMockOutcome(call.patient as any);
-			for (const line of outcome.transcripts) {
-				await prisma.callLog.create({
-					data: { callId: id, eventType: 'TRANSCRIPT', data: line },
-				});
-			}
-			updateData.summary = outcome.summary;
-			updateData.structuredData = outcome.structuredData as any;
+		if (summary) updateData.summary = summary;
+		if (structuredData) updateData.structuredData = structuredData;
+		if (callSid) updateData.callSid = callSid;
+		if (
+			status === CallStatus.COMPLETED ||
+			status === CallStatus.FAILED ||
+			status === CallStatus.CANCELLED
+		) {
 			updateData.completedAt = new Date();
-		} else {
-			if (summary) updateData.summary = summary;
-			if (structuredData) updateData.structuredData = structuredData;
-			if (callSid) updateData.callSid = callSid;
-			if (
-				status === CallStatus.COMPLETED ||
-				status === CallStatus.FAILED ||
-				status === CallStatus.CANCELLED
-			) {
-				updateData.completedAt = new Date();
-			}
 		}
 
 		const updatedCall = await prisma.call.update({

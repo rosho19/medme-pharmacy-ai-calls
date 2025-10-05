@@ -71,7 +71,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health check
 app.get('/api/health', (req, res) => {
-	res.json({ ok: true, env: process.env.NODE_ENV, mockVapi: process.env.MOCK_VAPI === 'true' })
+	res.json({ ok: true, env: process.env.NODE_ENV })
 })
 
 // API routes
