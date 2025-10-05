@@ -1,6 +1,6 @@
 # Pharmacy AI Voice Calling System
 
-A comprehensive AI-powered voice calling system designed for specialty pharmacies to automate patient communications for delivery confirmations and medication updates.
+A comprehensive AI-powered voice calling system designed for pharmacists to automate patient communications for delivery confirmations and medication updates.
 
 ## Architecture
 
